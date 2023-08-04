@@ -8,12 +8,12 @@
     <language>en-us</language>
     <lastBuildDate>Thu, 03 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="http://example.org/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>My First Post</title>
-      <link>http://example.org/posts/my-first-post/</link>
+      <title>探索Linux命名空间和控制组：实现资源隔离与管理的双重利器</title>
+      <link>http://example.org/posts/linux_namespace_cgroup/</link>
       <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
       
-      <guid>http://example.org/posts/my-first-post/</guid>
-      <description></description>
+      <guid>http://example.org/posts/linux_namespace_cgroup/</guid>
+      <description>介绍Linux 命名空间**(Namespace)** Linux 命名空间是一种隔离机制，允许将全局系统资源划分为多个独立的、相互隔离的部分，使得在不同</description>
     </item>
     
   </channel>
