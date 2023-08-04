@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>namespace on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/namespace/</link>
+    <description>Recent content in namespace on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 03 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/namespace/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>探索Linux命名空间和控制组：实现资源隔离与管理的双重利器</title>
+      <link>https://binbin0325.github.io/posts/linux_namespace_cgroup/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/linux_namespace_cgroup/</guid>
+      <description>介绍Linux 命名空间**(Namespace)** Linux 命名空间是一种隔离机制，允许将全局系统资源划分为多个独立的、相互隔离的部分，使得在不同</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -5,6 +5,34 @@
     <link>https://binbin0325.github.io/tags/</link>
     <description>Recent content in Tags on binbin0325</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language><atom:link href="https://binbin0325.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <language>en-us</language>
+    <lastBuildDate>Thu, 03 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>cgroups</title>
+      <link>https://binbin0325.github.io/tags/cgroups/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/tags/cgroups/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>linux</title>
+      <link>https://binbin0325.github.io/tags/linux/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/tags/linux/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>namespace</title>
+      <link>https://binbin0325.github.io/tags/namespace/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/tags/namespace/</guid>
+      <description></description>
+    </item>
+    
   </channel>
 </rss>
