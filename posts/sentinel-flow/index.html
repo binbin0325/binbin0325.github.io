@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>揭秘 Sentinel-Go [流量控制] 的实现原理 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="揭秘 Sentinel-Go [流量控制] 的实现原理.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="揭秘 Sentinel-Go [流量控制] 的实现原理"/>
+<meta name="twitter:description" content="揭秘 Sentinel-Go [流量控制] 的实现原理."/>
+
+  <meta property="og:title" content="揭秘 Sentinel-Go [流量控制] 的实现原理" />
+<meta property="og:description" content="揭秘 Sentinel-Go [流量控制] 的实现原理." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/sentinel-flow/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-08-03T11:51:54+08:00" />
+<meta property="article:modified_time" content="2023-08-03T11:51:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/linux_namespace_cgroup/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/series/themes-guide/" title="Guide">Guide</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/sentinel-go/" title="sentinel-go">sentinel-go</a>
+            
+            <a class="tag" href="/tags/algorithm/" title="algorithm">algorithm</a>
+            
+          </div>
+          <h1>揭秘 Sentinel-Go [流量控制] 的实现原理</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Thu, Aug 3, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="1-介绍">1. 介绍<a class="anchorjs-link" href="#1-%e4%bb%8b%e7%bb%8d"></a></h1><p>在上文中我们介绍了 Sentinel-Go 的基石【<a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;amp;mid=2247483955&amp;amp;idx=1&amp;amp;sn=bc1ab394a119f448839259bac4439d3d&amp;amp;chksm=cedb047af9ac8d6cfb2f74c7434b7b78921a79cc19c8287ddb3ab65a2150435e11e4962c60a3&amp;token=893110694&amp;lang=zh_CN#rd" target="_blank">基于滑动时间窗口实现的统计数据结构</a>】，Sentinel-Go利用底层的数据结构，在上层建筑了多种流量治理的场景，例如流量控制、熔断降级、热点参数等等。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/e8/e879bd9d6d97bf5df437694278f83d80.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>本文将重点介绍 Sentinel-Go 流量控制的底层实现与设计思考，其中也会涉及到令牌桶，漏桶，冷启动等算法与架构的工程实践。</p>
+<h1 id="2-流控规则">2. 流控规则<a class="anchorjs-link" href="#2-%e6%b5%81%e6%8e%a7%e8%a7%84%e5%88%99"></a></h1><p>在正式开始前先了解下 Sentinel-Go 的流控规则的详细参数，字段含义使用注释标注</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>type Rule struct {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   // 资源名，即规则的作用目标。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   Resource               string                 `json:&#34;resource&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   // 当前流量控制器的Token计算策略。Direct表示直接使用Threshold 作为阈值；
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   // WarmUp表示使用预热方式计算Token的阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   // MemoryAdaptive表示使用内存自适应方式计算Token的阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   TokenCalculateStrategy TokenCalculateStrategy `json:&#34;tokenCalculateStrategy&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   // 控制行为，Reject表示直接拒绝，Throttling表示匀速排队
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   ControlBehavior        ControlBehavior        `json:&#34;controlBehavior&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   // 表示流控阈值；如果字段 StatIntervalInMs 是1000(也就是1秒)，
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   // 那么Threshold就表示QPS，流量控制器也就会依据资源的QPS来做流控。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   Threshold        float64          `json:&#34;threshold&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>   // 调用关系限流策略，CurrentResource表示使用当前规则的resource做流控；
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   // AssociatedResource表示使用关联的resource做流控，关联的resource在字段 RefResource 定义；
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   RelationStrategy RelationStrategy `json:&#34;relationStrategy&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>   // 关联的resource
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>   RefResource      string           `json:&#34;refResource&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   // 匀速排队的最大等待时间，该字段仅仅对控制行为是匀速排队时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>   MaxQueueingTimeMs uint32 `json:&#34;maxQueueingTimeMs&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   // 预热的时间长度，该字段仅仅对Token计算策略是WarmUp时生效；
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>   WarmUpPeriodSec   uint32 `json:&#34;warmUpPeriodSec&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>   // 预热的因子，默认是3，该值的设置会影响预热的速度,该字段仅仅对Token计算策略是WarmUp时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>   WarmUpColdFactor  uint32 `json:&#34;warmUpColdFactor&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>   // 规则对应的流量控制器的独立统计结构的统计周期。如果StatIntervalInMs是1000，也就是统计QPS。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>   StatIntervalInMs uint32 `json:&#34;statIntervalInMs&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>   // 内存低使用率时的限流阈值，该字段仅在Token计算策略是MemoryAdaptive时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>   LowMemUsageThreshold  int64 `json:&#34;lowMemUsageThreshold&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>   // 内存高使用率时的限流阈值，该字段仅在Token计算策略是MemoryAdaptive时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>   HighMemUsageThreshold int64 `json:&#34;highMemUsageThreshold&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span>   // 内存低水位标记字节大小，该字段仅在Token计算策略是MemoryAdaptive时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>   MemLowWaterMarkBytes  int64 `json:&#34;memLowWaterMarkBytes&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span>   // 内存高水位标记字节大小，该字段仅在Token计算策略是MemoryAdaptive时生效
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>   MemHighWaterMarkBytes int64 `json:&#34;memHighWaterMarkBytes&#34;`
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span>}
+</span></span></code></pre></div><h1 id="3-流量控制">3. 流量控制<a class="anchorjs-link" href="#3-%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6"></a></h1><p>何谓流量控制，在 Sentinel-Go 中其本质是监控资源(Resource)的统计指标，然后根据 Token 计算策略来计算资源的可用 Token (也就是阈值)，从而根据流量控制策略对流量进行控制，避免系统被瞬时的流量高峰冲垮，保障应用的高可用性。</p>
+<h2 id="31-流量控制策略">3.1 流量控制策略<a class="anchorjs-link" href="#31-%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6%e7%ad%96%e7%95%a5"></a></h2><p>流量控制策略由规则中的 TokenCalculateStrategy (Token计算策略)和 ControlBehavior (控制行为) 两个字段共同决定。两个字段可以按实际场景按需组合使用，不同的组合对应的流量控制效果是不同的。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/20/20bcc22299f329a83bc1dbd9ccda9c61.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>在Sentinel-Go中将Token计算策略和控制行为抽象为两个interface，在初始化时会根据流控规则创建对应的流量控制器，其中流量控制器中包含了下面两个接口的实现以及统计结构。</p>
+<ul>
+<li>
+<p>TrafficShapingCalculator：<strong>计算流量控制的实际阈值（Token）</strong></p>
+</li>
+<li>
+<p>TrafficShapingChecker: <strong>根据实际阈值与统计结构中的指标进行流量控制</strong></p>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>// TrafficShapingCalculator 根据规则的阈值和token计算策略计算实际的阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>type TrafficShapingCalculator interface {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   BoundOwner() *TrafficShapingController
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   CalculateAllowedTokens(batchCount uint32, flag int32) float64
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>// TrafficShapingChecker 根据当前指标和控制行为进行检查，生成token控制结果。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>type TrafficShapingChecker interface {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   BoundOwner() *TrafficShapingController
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   DoCheck(resStat base.StatNode, batchCount uint32, threshold float64) *base.TokenResult
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>}
+</span></span></code></pre></div><p>Sentinel-Go提供三种Token计算策略以及两种控制流量的行为</p>
+<ul>
+<li>
+<p><strong>Token计算策略</strong></p>
+</li>
+<li>
+<p><strong>固定的限流阈值</strong>: 使用流控规则中的限流阈值，该方式是默认的流量控制方式，当QPS超过任意规则的阈值后，新的请求就会被立即拒绝，这种方式适用于对系统处理能力确切已知的情况下，比如通过压测确定了系统的准确水位时</p>
+</li>
+<li>
+<p><strong>WarmUp(预热)</strong>：该方式主要用于系统长期处于低水位的情况下，当流量突然增加时，直接把系统拉升到高水位可能瞬间把系统压垮。通过&quot;冷启动&quot;，让通过的流量缓慢增加，在一定时间内逐渐增加到阈值上限，给冷系统一个预热的时间，避免冷系统被压垮的情况</p>
+</li>
+<li>
+<p><strong>内存自适应</strong>：该方式主要用于保护系统内存不会随着流量的增长而无限增长，在内存的安全界限内动态调整限流阈值，尽可能的提升吞吐。</p>
+</li>
+<li>
+<p><strong>流控行为</strong></p>
+</li>
+<li>
+<p><strong>拒绝</strong>：当流量超过阈值时后面的流量将直接拒绝。这种行为简单粗暴可以很好的控制系统的负载，但是有损被拒绝掉的流量不会被服务处理。</p>
+</li>
+<li>
+<p><strong>匀速排队</strong>：当QPS超过阈值时后面的流量将会按照固定时间依次排队通过，起到削峰填谷的效果。此行为是利用漏桶算法实现，适合用于间隔性流量突发的场景，例如：消息队列。</p>
+</li>
+</ul>
+<p>下面将详细介绍不同的Token计算策略和控制行为对应的效果以及实现方式。</p>
+<h2 id="32-token计算策略">3.2 Token计算策略<a class="anchorjs-link" href="#32-token%e8%ae%a1%e7%ae%97%e7%ad%96%e7%95%a5"></a></h2><h3 id="321-directthresold">3.2.1 Direct(Thresold)<a class="anchorjs-link" href="#321-directthresold"></a></h3><p>当流控规则中TokenCalculateStrategy设置为Direct，则代表使用规则中的Thresold当作阈值进行流控。 在Direct策略下Token不需要计算，使用规则中配置的固定值即可。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>func (d *DirectTrafficShapingCalculator) CalculateAllowedTokens(uint32, int32) float64 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>   return d.threshold
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>}
+</span></span></code></pre></div><h3 id="322-warmup预热">3.2.2 WarmUp(预热)<a class="anchorjs-link" href="#322-warmup%e9%a2%84%e7%83%ad"></a></h3><h4 id="介绍">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d"></a></h4><p>当流控规则中TokenCalculateStrategy设置为WarmUp，则代表使用预热（冷启动）方式计算Token（限流阈值），当系统长期处于低水位的情况下，当流量突然增加时，直接把系统拉升到高水位可能瞬间把系统压垮。通过&quot;冷启动&quot;，让通过的流量缓慢增加，在一定时间内逐渐增加到阈值上限，给冷系统一个预热的时间，避免冷系统被压垮</p>
+<p>通常冷启动的过程系统允许通过的 QPS 曲线如下图所示：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/56/56d937f9f1adadcee2c561e3e9039f3c.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h4 id="原理">原理<a class="anchorjs-link" href="#%e5%8e%9f%e7%90%86"></a></h4><p>在Sentinel-Go中的WarmUp实现参考了Guava的SmoothRateLimited,本质是一个令牌桶算法。</p>
+<p>常规的令牌桶算法：有一个负责生产令牌的生产者以及负责获取令牌的消费者，当令牌桶满的时候生产者生产的令牌直接丢弃，否则将令牌存储到令牌桶中。当有流量经过时令牌消费者先从令牌桶中获取令牌，如果获取成功则放行当前流量，如果令牌桶中没有令牌则将当前流量拒绝。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/3b/3b5f3a3b1538b16901093cf4763092de.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>按照令牌桶算法对应到Sentinel-Go中，负责生产令牌的生产者即是WarmUp的Token计算策略，负责消费令牌的消费者则是行为控制</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/ae/aef289fe50a02f09f2c9dd7dfb1b2787.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>在Sentinel-Go的WarmUp的<strong>令牌生成算法模型如下:</strong></p>
+<p><strong>（这个图要从右向左进行理解，本质是要根据预热时间、限流阈值等参数推导出令牌生成的时间间隔（y轴），从而可以知道每秒能生成多少个令牌，即可达到动态生成限流阈值的效果）</strong></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/55/55739de87f86069cb32cb7d68c6e0b08.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li>
+<p>x轴：令牌桶容量</p>
+</li>
+<li>
+<p>y轴：每个令牌生成的时间间隔</p>
+</li>
+<li>
+<p>warningToken:令牌预警数量，即令牌桶中的剩余令牌数量到达预警值时，预热结束。</p>
+</li>
+<li>
+<p>maxToken:令牌桶最大容量，当令牌桶到达容量后，生成的令牌将被丢弃</p>
+</li>
+<li>
+<p>slope:斜率，用来计算当前令牌生成的时间间隔</p>
+</li>
+<li>
+<p>warmUpPeriodSec:系统冷启动的时间，单位秒</p>
+</li>
+</ul>
+<p>假设规则如下：阈值设置为100，冷启动时间为10S,冷却因子默认为3，滑动时间窗口统计周期为1000毫秒</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>   TokenCalculateStrategy: flow.WarmUp,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>   ControlBehavior:        flow.Reject,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>   Threshold:              100,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>   WarmUpPeriodSec:        10,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>   WarmUpColdFactor:       3,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>   StatIntervalInMs:       1000,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>}
+</span></span></code></pre></div><p>在初始化WarmUp计算策略func中，会计算对应的warningToken=500, maxToken=1000, slope=0.00004</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>warningToken := uint64((float64(rule.WarmUpPeriodSec) * rule.Threshold) / float64(rule.WarmUpColdFactor-1))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>maxToken := warningToken + uint64(2*float64(rule.WarmUpPeriodSec)*rule.Threshold/float64(1.0+rule.WarmUpColdFactor))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>slope := float64(rule.WarmUpColdFactor-1.0) / rule.Threshold / float64(maxToken-warningToken)
+</span></span></code></pre></div><p>初始化后，对应参数如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/76/7633f6c6679d568525e6e0291baac8a3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>接下来重点看下计算Token的算法：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>func (c *WarmUpTrafficShapingCalculator) CalculateAllowedTokens(_ uint32, _ int32) float64 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   // 获取滑动时间窗口前一个统计周期的QPS，依托于底层的统计结构
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   metricReadonlyStat := c.BoundOwner().boundStat.readOnlyMetric
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   previousQps := metricReadonlyStat.GetPreviousQPS(base.MetricEventPass)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   // 同步令牌桶中的令牌(包括生成和丢弃)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   c.syncToken(previousQps)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   // 原子获取令牌桶中的令牌数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   restToken := atomic.LoadInt64(&amp;c.storedTokens)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   if restToken &lt; 0 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>      restToken = 0
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   // 如果桶中令牌数&gt;=令牌预警线(500)，代表还在冷启动阶段
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>   if restToken &gt;= int64(c.warningToken) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>      // 计算桶中令牌和预警线的差值(也就是还有多少个令牌可用)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>      aboveToken := restToken - int64(c.warningToken)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>      // 动态计算出每秒允许通过的QPS阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>      warningQps := math.Nextafter(1.0/(float64(aboveToken)*c.slope+1.0/c.threshold), math.MaxFloat64)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>      return warningQps
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>   } else {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   // 如果桶中令牌数&lt;令牌预警线，则说明冷启动已经结束，直接返回规则中的阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>      return c.threshold
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>}
+</span></span></code></pre></div><p><strong>假设令牌桶中有1000(restToken)个令牌，slope=0.00004,warningToken=500, 此时在预热期间。那么aboveToken=500。</strong></p>
+<p><strong>计算每秒通过的QPS阈值，首先看这段公式的：通过斜率算出当前token的生成时间间隔0.03毫秒（也就是求出X轴=1000时，Y轴的的数值=0.03）</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>(float64(aboveToken)*c.slope+1.0/c.threshold=500*0.00004+1/100=0.03
+</span></span></code></pre></div><p>然后通过当前token生成时间间隔计算出每秒可通过的QPS（token阈值）=33.33</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>math.Nextafter(1.0/(float64(aboveToken)*c.slope+1.0/c.threshold), math.MaxFloat64)
+</span></span></code></pre></div><p>在syncToken中主要是更新令牌桶中令牌的数量：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>func (c *WarmUpTrafficShapingCalculator) syncToken(passQps float64) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   // 获取当前时间(毫秒)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   currentTime := util.CurrentTimeMillis()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   // 获取当前时间(秒)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   currentTime = currentTime - currentTime%1000
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   // 最后填充令牌桶时间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   oldLastFillTime := atomic.LoadUint64(&amp;c.lastFilledTime)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   // 如果当前时间小于最后填充时间，说明出现了时间回拨，则不需要填充/丢弃令牌
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   // 如果当前时间等于最后填充时间，说明在同一秒内已经同步过令牌桶了，避免重复填充/丢弃令牌
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   if currentTime &lt;= oldLastFillTime {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>      return
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>    
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>   // 获取当前桶中的令牌数量
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>   oldValue := atomic.LoadInt64(&amp;c.storedTokens)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   // 初始化/生成令牌
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>   newValue := c.coolDownTokens(currentTime, passQps)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   // 利用cas存储最新的令牌数量，避免并发不安全问题。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>   if atomic.CompareAndSwapInt64(&amp;c.storedTokens, oldValue, newValue) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>      // 最终桶中令牌数=桶中令牌数-已经通过的QPS
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>      if currentValue := atomic.AddInt64(&amp;c.storedTokens, int64(-passQps)); currentValue &lt; 0 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>         atomic.StoreInt64(&amp;c.storedTokens, 0)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>      }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>      // 更新最后更新令牌桶的时间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>      atomic.StoreUint64(&amp;c.lastFilledTime, currentTime)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>}
+</span></span></code></pre></div><p>在coolDownTokens中初始化令牌桶以及填充令牌：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>func (c *WarmUpTrafficShapingCalculator) coolDownTokens(currentTime uint64, passQps float64) int64 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   oldValue := atomic.LoadInt64(&amp;c.storedTokens)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   newValue := oldValue
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   // 如果令牌桶中的令牌数量小于令牌预警线
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   // 初始化时桶中令牌=0一定小于warningToken
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   // 预热结束后，令牌桶中的数量也会小于预警线
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   if oldValue &lt; int64(c.warningToken) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>     // 填充令牌=桶中令牌数+每秒应该生成的令牌数100
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>      newValue = int64(float64(oldValue) + (float64(currentTime)-float64(atomic.LoadUint64(&amp;c.lastFilledTime)))*c.threshold/1000.0)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   } else if oldValue &gt; int64(c.warningToken) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>   // 如果令牌数量大于预警线，说明应该在预热期间 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   // 但是如果通过的请求数(消费的令牌数)小于冷却数量，说明并没有真正的开始预热
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   // 则需要填充令牌，让桶中令牌维持在maxToken
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>      if passQps &lt; float64(uint32(c.threshold)/c.coldFactor) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>         newValue = int64(float64(oldValue) + float64(currentTime-atomic.LoadUint64(&amp;c.lastFilledTime))*c.threshold/1000.0)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>      }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   // 当前生成的令牌小于最大令牌数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>   if newValue &lt;= int64(c.maxToken) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>      return newValue
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>   } else {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>   // 如果但前令牌大雨最大令牌，则丢弃多余令牌，让桶中始终最多拥有maxToken
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>      return int64(c.maxToken)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>}
+</span></span></code></pre></div><h4 id="总结">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93"></a></h4><p>在Sentinel-Go中的WarmUp模型本质是令牌桶算法，在初始化时将令牌桶中&quot;填满&quot;，预热期间扣减令牌，用剩余的令牌与斜率推导出每秒可以扣减的令牌数量，从而动态得出预热期间的限流阈值。</p>
+<h3 id="323-内存自适应">3.2.3 内存自适应<a class="anchorjs-link" href="#323-%e5%86%85%e5%ad%98%e8%87%aa%e9%80%82%e5%ba%94"></a></h3><h4 id="介绍-1">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d-1"></a></h4><p>当流控规则中TokenCalculateStrategy设置为MemoryAdaptive，则代表使用内存自适应方式计算Token（限流阈值）。流量大小会间接影响系统内存使用率，当系统内存使用率过大时一定程度上也会影响吞吐量与请求耗时，在内存自适应中可以根据系统的内存使用情况动态的计算限流阈值，从而让系统更加平稳的运行 </p>
+<h4 id="原理-1">原理<a class="anchorjs-link" href="#%e5%8e%9f%e7%90%86-1"></a></h4><p>在Sentinel-Go中使用内存自适应流控的规则如下：（需要指定低和高水位内存的字节数以及内存低和高水位时对应的限流阈值）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   Resource:               resName,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   TokenCalculateStrategy: flow.MemoryAdaptive,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   ControlBehavior:        flow.Reject,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   StatIntervalInMs:       1000,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   LowMemUsageThreshold:   1000, // 低水位限流阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   HighMemUsageThreshold:  100,  // 高水位限流阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   MemLowWaterMarkBytes:  1024,  // 低水位内存字节
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   MemHighWaterMarkBytes: 2048,  // 高水位内存字节
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>},
+</span></span></code></pre></div><p>本质上Sentinel-Go将内存划分为三个区域，分别是内存高水位区域，低水位区域以及阈值动态波动区域。当内存使用在高水位或低水位区域时则使用对应的水位阈值，如果内存在阈值的波动区域（高水位字节减低水位字节），那么则需要动态计算流控阈值。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/52/52a8f83abb5fac060141a9478807157c.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>Token计算逻辑也相对简单，只需要动态的获取内存已使用的字节(使用工具库gopsutil)，然后去对比当前内存使用的字节在哪一个区域内，如果在动态的波动区域内则简单的数学公式计算出对应的动态流控阈值</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>(float64(m.highMemUsageThreshold-m.lowMemUsageThreshold)/float64(m.memHighWaterMark-m.memLowWaterMark))*float64(mem-m.memLowWaterMark) + float64(m.lowMemUsageThreshold)
+</span></span></code></pre></div><p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/5b/5bd7f49fcdf38e80befc2c2aa0c1191b.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h4 id="总结-1">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93-1"></a></h4><p>内存自适应算法中提前将内存的最低以及最高水位对应的流控阈值规划好，然后根据内存使用情况在“安全的”范围内去动态控制流控阈值</p>
+<h2 id="33-控制行为流控行为">3.3 控制行为（流控行为）<a class="anchorjs-link" href="#33-%e6%8e%a7%e5%88%b6%e8%a1%8c%e4%b8%ba%e6%b5%81%e6%8e%a7%e8%a1%8c%e4%b8%ba"></a></h2><h3 id="331-直接拒绝">3.3.1 直接拒绝<a class="anchorjs-link" href="#331-%e7%9b%b4%e6%8e%a5%e6%8b%92%e7%bb%9d"></a></h3><h4 id="介绍-2">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d-2"></a></h4><p>当流控规则中ControlBehavior设置为<strong>Reject</strong>，则代表使用“拒绝”的流控行为，<strong>当请求流量大于限流阈值时则将超出阈值的请求直接返回。</strong></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/d8/d8c45eba3c623360e5730c3a0651c6d2.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h4 id="原理-2">原理<a class="anchorjs-link" href="#%e5%8e%9f%e7%90%86-2"></a></h4><p>在拒绝的控制行为中实现相对简单，主要是依托于上文介绍的<a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;amp;mid=2247483955&amp;amp;idx=1&amp;amp;sn=bc1ab394a119f448839259bac4439d3d&amp;amp;chksm=cedb047af9ac8d6cfb2f74c7434b7b78921a79cc19c8287ddb3ab65a2150435e11e4962c60a3&amp;token=893110694&amp;lang=zh_CN#rd" target="_blank">滑动时间轮统计结构</a>，有了统计结构可以很轻松的获取到已通过的请求数，从而与限流阈值进行比对。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>// 参数中threshold则是token计算策略中计算出的限流阈值
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>func (d *RejectTrafficShapingChecker) DoCheck(resStat base.StatNode, batchCount uint32, threshold float64) *base.TokenResult {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   // 获取统计结构
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>   metricReadonlyStat := d.BoundOwner().boundStat.readOnlyMetric
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   if metricReadonlyStat == nil {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>      return nil
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   // 获取当前统计周期内已通过的请求数量
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   curCount := float64(metricReadonlyStat.GetSum(base.MetricEventPass))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   // 已通过的请求+当前请求&gt;限流阈值则直接返回限流结果
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   if curCount+float64(batchCount) &gt; threshold {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>      msg := &#34;flow reject check blocked&#34;
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>      return base.NewTokenResultBlockedWithCause(base.BlockTypeFlow, msg, d.rule, curCount)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   return nil
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>}
+</span></span></code></pre></div><h3 id="332-匀速排队">3.3.2 匀速排队<a class="anchorjs-link" href="#332-%e5%8c%80%e9%80%9f%e6%8e%92%e9%98%9f"></a></h3><h4 id="介绍-3">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d-3"></a></h4><p>当流控规则中ControlBehavior设置为<strong>Throttling</strong>，则代表使用“匀速排队”（也叫匀速器）的流控行为。与直接拒绝的控制行为不同的是<strong>当请求流量大于限流阈值时则将超出阈值的请求按照一定的间隔时间匀速通过，对应的是漏桶算法。</strong></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/5f/5f075873c5ddeda379b054ea7ba641f6.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h4 id="原理-3">原理<a class="anchorjs-link" href="#%e5%8e%9f%e7%90%86-3"></a></h4><p>在Sentinel-Go中匀速排队的流控行为，本质上就是一个漏桶。漏桶的特点:流入速率不固定，但是流出速率是固定的。<strong>当前流量+已通过的流量大于阈值时将当前流量放入漏桶中，然后在漏桶里对流量按照固定的时间间隔排队通过。</strong></p>
+<p>排队的过程如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/d0/d0776c1f40609d1910e7358bd54c33a3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>匀速排队的实现代码,在注释中讲解了细节的实现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>func (c *ThrottlingChecker) DoCheck(_ base.StatNode, batchCount uint32, threshold float64) *base.TokenResult {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   // 获取当前时间(单位纳秒，方便更精确的计算排队时间)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   curNano := int64(util.CurrentTimeNano())
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   // 计算每个流量排队的时间间隔，这里假设当前流量(batchCount=1),流控阈值(threshold=100),统计周期:单位纳秒(statIntervalNs=1000000000)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   intervalNs := int64(math.Ceil(float64(batchCount) / threshold * float64(c.statIntervalNs)))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   // 最后一个流量排队通过的时间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   loadedLastPassedTime := atomic.LoadInt64(&amp;c.lastPassedTime)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   // 当前请求预计的通过时间=最后一个流量排队通过的时间+排队的时间间隔
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   expectedTime := loadedLastPassedTime + intervalNs
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   // 如果预计通过的时间小于当前时间，则说明不需要排队，直接放行。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   if expectedTime &lt;= curNano {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>      if swapped := atomic.CompareAndSwapInt64(&amp;c.lastPassedTime, loadedLastPassedTime, curNano); swapped {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>         // nil means pass
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>         return nil
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>      }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   // 预估排队等待的时长=当前请求预计的通过时间-当前时间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>   estimatedQueueingDuration := atomic.LoadInt64(&amp;c.lastPassedTime) + intervalNs - curNano
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   // 如果预估排队时长大于设定的最大等待时长，则直接被拒绝掉当前流量
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>   if estimatedQueueingDuration &gt; c.maxQueueingTimeNs {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>      return base.NewTokenResultBlockedWithCause(base.BlockTypeFlow, BlockMsgQueueing, rule, nil)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>   // 原子操作:得到当前流量的通过时间(这里主要避免并发导致lastPassedTime不是最新的)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>   oldTime := atomic.AddInt64(&amp;c.lastPassedTime, intervalNs)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>   // 预估排队等待的时长
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>   estimatedQueueingDuration = oldTime - curNano
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>   if estimatedQueueingDuration &gt; c.maxQueueingTimeNs {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>      // 如果大于了设定的最大等待时长，这里减去排队间隔，因为不需要排队了，直接拒绝当前流量。
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span>      atomic.AddInt64(&amp;c.lastPassedTime, -intervalNs)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>      return base.NewTokenResultBlockedWithCause(base.BlockTypeFlow, BlockMsgQueueing, rule, nil)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>   // 如果预估排队等待的时长大于0，则按照排队等待的时长进行sleep
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span>   if estimatedQueueingDuration &gt; 0 {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35</span><span>      return base.NewTokenResultShouldWait(time.Duration(estimatedQueueingDuration))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36</span><span>   } else {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37</span><span>      return base.NewTokenResultShouldWait(0)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39</span><span>}
+</span></span></code></pre></div><h4 id="总结-2">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93-2"></a></h4><p>在匀速排队的控制行为中将超过阈值的流量，按照固定的时间间隔依次的排队等待。 等待的时间是根据前一个流量的排队通过时间+排队的时间间隔计算出来的，等待的动作是sleep。符合漏桶的特点，按照固定的速率放行流量。</p>
+<h1 id="4-基于调用关系的流量控制">4. 基于调用关系的流量控制<a class="anchorjs-link" href="#4-%e5%9f%ba%e4%ba%8e%e8%b0%83%e7%94%a8%e5%85%b3%e7%b3%bb%e7%9a%84%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6"></a></h1><p>Sentinel-Go 支持关联流量控制策略。当两个资源之间具有资源争抢或者依赖关系的时候，这两个资源便具有了关联。比如对数据库同一个字段的读操作和写操作存在争抢，读的速度过高会影响写得速度，写的速度过高会影响读的速度。如果放任读写操作争抢资源，则争抢本身带来的开销会降低整体的吞吐量。可使用关联限流来避免具有关联关系的资源之间过度的争抢。</p>
+<p>当流控规则中RelationStrategy=AssociatedResource时则代表使用基于调用关系的流量控制</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>   Resource:               resName,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>   TokenCalculateStrategy: flow.Direct,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>   ControlBehavior:        flow.Reject,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>   RelationStrategy:       flow.AssociatedResource,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>   RefResource:            &#34;db-write&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>   Threshold:              10,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>   StatIntervalInMs:       1000,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">9</span><span>}
+</span></span></code></pre></div><p>这种方式的 Token 计算策略和流控行为的实现方式都和上面介绍的一样，只不过在初始化Token计算策略和流控行为时绑定的是关联资源的统计结构。这样在计算阈值以及获取当前QPS等指标都是获取的关联资源的数据，那么就可以依据关联资源的指标数据进行流控了。</p>
+<h1 id="5-总结">5. 总结<a class="anchorjs-link" href="#5-%e6%80%bb%e7%bb%93"></a></h1><p>Sentinel-Go 在流量控制中提供了多种流量控制场景。实现的方式是通过组合Token计算策略和流控行为，并基于底层的滑动时间窗口统计数据结构来进行流量控制（其中最有特点的是冷启动+匀速排队的组合方式，相当于令牌桶+漏桶的组合）本文通过对流量控制的实现细节进行详解，相信大家在实际运用中可以更好的选择对应的组合方式。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/56/561ff8adbee5434d61b63b2c8b70aeea.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h3 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h3><p>张斌斌（Github 账号：binbin0325，公众号:柠檬汁 Code）Sentinel-Golang Committer 、ChaosBlade Committer 、 Nacos PMC 、Apache Dubbo-Go Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          
+          <li class="next">
+            <a href="/posts/linux_namespace_cgroup/" data-toggle="tooltip" data-placement="top" title="探索Linux命名空间和控制组：实现资源隔离与管理的双重利器">
+              Next<br>
+              <span>探索Linux命名空间和控制组：实现资源隔离与管理的双重利器</span>
+            </a>
+          </li>
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>

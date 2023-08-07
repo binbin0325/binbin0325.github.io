@@ -16,5 +16,14 @@
       <description>介绍Linux 命名空间**(Namespace)** Linux 命名空间是一种隔离机制，允许将全局系统资源划分为多个独立的、相互隔离的部分，使得在不同</description>
     </item>
     
+    <item>
+      <title>揭秘 Sentinel-Go [流量控制] 的实现原理</title>
+      <link>https://binbin0325.github.io/posts/sentinel-flow/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/sentinel-flow/</guid>
+      <description>1. 介绍在上文中我们介绍了 Sentinel-Go 的基石【基于滑动时间窗口实现的统计数据结构】，Sentinel-Go利用底层的数据结构，在上层建筑了多种流量治理的</description>
+    </item>
+    
   </channel>
 </rss>

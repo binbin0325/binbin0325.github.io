@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>algorithm on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/algorithm/</link>
+    <description>Recent content in algorithm on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 03 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/algorithm/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>揭秘 Sentinel-Go [流量控制] 的实现原理</title>
+      <link>https://binbin0325.github.io/posts/sentinel-flow/</link>
+      <pubDate>Thu, 03 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/sentinel-flow/</guid>
+      <description>1. 介绍在上文中我们介绍了 Sentinel-Go 的基石【基于滑动时间窗口实现的统计数据结构】，Sentinel-Go利用底层的数据结构，在上层建筑了多种流量治理的</description>
+    </item>
+    
+  </channel>
+</rss>
