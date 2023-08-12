@@ -6,7 +6,16 @@
     <description>Recent content in Posts on binbin0325</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 09 Aug 2023 09:39:52 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 12 Aug 2023 21:11:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>揭秘 Sentinel-Go [热点参数] 的实现原理</title>
+      <link>https://binbin0325.github.io/posts/sentinel-hotspot/</link>
+      <pubDate>Sat, 12 Aug 2023 21:11:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/sentinel-hotspot/</guid>
+      <description>1. 前文回顾在上文中介绍了流量控制的实现原理，流量控制本质是根据资源所属的流控规则以及滑动时间窗口统计结构，对流量统计与计算从而控制流量的行为</description>
+    </item>
+    
     <item>
       <title>揭秘 Sentinel-Go 毫秒级统计数据结构的实现原理</title>
       <link>https://binbin0325.github.io/posts/sentinel-data/</link>
