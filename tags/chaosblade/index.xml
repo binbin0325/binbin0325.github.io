@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>chaosblade on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/chaosblade/</link>
+    <description>Recent content in chaosblade on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 13 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/chaosblade/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>混沌工程之 ChaosBlade 利刃出鞘</title>
+      <link>https://binbin0325.github.io/posts/chaosblade-1/</link>
+      <pubDate>Sun, 13 Aug 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/chaosblade-1/</guid>
+      <description>1. 什么是混沌工程 Chaos Engineering is the discipline of experimenting on a system in order to build confidence in the system’s capability to withstand turbulent conditions in production. -《混沌工程原理》http://principlesofch</description>
+    </item>
+    
+  </channel>
+</rss>
