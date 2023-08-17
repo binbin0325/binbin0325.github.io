@@ -462,7 +462,7 @@
 <h1 id="5-总结">5. 总结<a class="anchorjs-link" href="#5-%e6%80%bb%e7%bb%93"></a></h1><p>热点参数流控支持：并发和QPS两种维度进行控制，控制的手段分为：直接拒绝和匀速排队。</p>
 <p>热点参数流控更适合细粒度的流控场景，例如以商品 ID 为参数，统计一段时间内最常购买的商品 ID 并进行限制，或者以用户 ID 为参数，针对一段时间内频繁访问的用户 ID 进行限制。</p>
 <p>热点参数流控底层并没有使用滑动时间窗口而是使用LRU作为统计结构，利用LRU的缓存淘汰特性，节省空间使用率，并利用令牌桶以及漏桶算法实现对流量的控制。</p>
-<h2 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h2><p>Github账号：binbin0325，公众号:柠檬汁Code，Sentinel-Golang Committer 、ChaosBlade Committer 、 Nacos PMC 、Apache Dubbo-Go Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<h2 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h2><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
 <p><figure>
   <a class="paragraph-image">
     <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
