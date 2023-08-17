@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>混沌工程之 ChaosBlade 故障注入百宝箱 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="混沌工程之 ChaosBlade 故障注入百宝箱.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="混沌工程之 ChaosBlade 故障注入百宝箱"/>
+<meta name="twitter:description" content="混沌工程之 ChaosBlade 故障注入百宝箱."/>
+
+  <meta property="og:title" content="混沌工程之 ChaosBlade 故障注入百宝箱" />
+<meta property="og:description" content="混沌工程之 ChaosBlade 故障注入百宝箱." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/chaosblade-tool/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-08-17T09:50:54+08:00" />
+<meta property="article:modified_time" content="2023-08-17T09:50:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-hotspot/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-data/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/linux_namespace_cgroup/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-flow/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/series/themes-guide/" title="Guide">Guide</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/chaos/" title="chaos">chaos</a>
+            
+            <a class="tag" href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/" title="混沌工程">混沌工程</a>
+            
+            <a class="tag" href="/tags/chaosblade/" title="chaosblade">chaosblade</a>
+            
+          </div>
+          <h1>混沌工程之 ChaosBlade 故障注入百宝箱</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Thu, Aug 17, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="前言">前言<a class="anchorjs-link" href="#%e5%89%8d%e8%a8%80"></a></h1><p>在<a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;mid=2247484031&amp;idx=1&amp;sn=4bfc81c1ee268dc0c8d529a4b5fc9949&amp;chksm=cedb0436f9ac8d202f021e6b3e635e08573ce29d14591c9376f7594a623983ebd87103d915f6&amp;token=1141223089&amp;lang=zh_CN#rd" target="_blank">上文</a>中对 ChaosBlade 进行了整体介绍，其中主要分为 ChaosBlade Box 以及 ChaosBlade Tool 两大部分，ChaosBlade Box 提供了可视化的管理控制台。真正的故障注入能力是由 ChaosBlade Tool 提供的。 本文将重点介绍 ChaosBlade Tool 的架构以及实现细节。</p>
+<h1 id="chaosblade-tool">ChaosBlade Tool<a class="anchorjs-link" href="#chaosblade-tool"></a></h1><p>ChaosBlade Tool 是一个故障注入工具箱，它本身并不是一个实际项目/工程，它是由一个 CLI 项目和多个故障执行器组成，ChasoBlade Tool 架构如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/00/00cef6018bc06f27f6b244b91f850a90.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ol>
+<li>
+<p>ChaosBlade Cli</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade Cli</a> 项目：主要负责故障指令生成，解析故障注入指令，故障指令分发，以及记录故障的状态</p>
+</li>
+<li>
+<p>ChaosBlade OS</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-os" target="_blank">ChaosBlade OS</a> 执行器：主要负责基础资源类的故障注入，例如 CPU，内存，网络，磁盘等</p>
+</li>
+<li>
+<p>ChaosBlade JVM</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-jvm" target="_blank">ChaosBlade JVM</a> 执行器：主要负责 Java 应用的故障注入，例如 Dubbo，Http，JVM 等等</p>
+</li>
+<li>
+<p>ChaosBlade Docker</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-docker" target="_blank">ChaosBlade Docker</a> 执行器：主要负责针对 Docker 环境下的故障注入，例如针对某个 Docker 容器进行基础资源故障，删除指定 Docker 容器等</p>
+</li>
+<li>
+<p>ChaosBlade K8S</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-operator" target="_blank">ChaosBlade K8S</a> 执行器：主要负责针对 K8S 环境下的 Pod，Node，Container 进行故障注入，支持基础资源故障，删除 Pod 等。K8S 的执行器和其他执行器稍有不同，是在 Cli 项目中直接调用 K8S 集群创建 CRD，通过 Operator 来实现的故障注入。这里先大概了解，后面会在 K8S 故障注入源码分析中详细介绍</p>
+</li>
+<li>
+<p>ChaosBlade CRI</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-cri" target="_blank">ChaosBlade CRI</a> 执行器：主要负责对于容器运行插件（兼容 CRI）的容器进行故障注入，容器运行时插件（Container Runtime Interface，简称 CRI）是 Kubernetes v1.5 引入的容器运行时接口，它将 Kubelet 与容器运行时解耦，例如 Docker、Containerd 等容器运行时都是 CRI 的实现，后续社区计划将 <a href="https://github.com/chaosblade-io/chaosblade-exec-docker" target="_blank">ChaosBlade Docker</a> 执行器废弃，改用 ChaosBlade CRI 执行器</p>
+</li>
+<li>
+<p>ChaosBlade C++</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-cplus" target="_blank">ChaosBlade C++</a> 执行器：主要负责对 C++服务进行故障注入，利用 GDB 实现。提供修改返回值，变量值，调用延迟等故障注入能力</p>
+</li>
+<li>
+<p>ChaosBlade Middleware</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-middleware" target="_blank">ChaosBlade Middleware</a> 执行器: 主要负责对中间件进行故障注入，目前支持 nginx 的重启，销毁，配置变更，修改返回值等</p>
+</li>
+<li>
+<p>ChaosBlade Cloud</p>
+<p><a href="https://github.com/chaosblade-io/chaosblade-exec-cloud/tree/main/exec/aliyun" target="_blank">ChaosBlade Cloud</a> 执行器：主要负责对各种云平台进行故障注入，例如阿里云的 ECS 的上线/下线/重启、公网 IP 的解绑、安全组的修改等等。</p>
+</li>
+</ol>
+<h1 id="chaosblade-cli">ChaosBlade Cli<a class="anchorjs-link" href="#chaosblade-cli"></a></h1><h2 id="介绍">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d"></a></h2><p>Cli 是一个独立的项目，打包编译后生成二进制可执行程序，它主要负责故障指令生成，解析故障注入指令，故障指令分发，以及记录故障的状态。用户可以直接运行它进行各种场景的故障注入以及故障恢复等操作。</p>
+<p>下面我将通过实际使用案例对 CLI 项目进行详细介绍。</p>
+<h2 id="故障注入命令">故障注入命令<a class="anchorjs-link" href="#%e6%95%85%e9%9a%9c%e6%b3%a8%e5%85%a5%e5%91%bd%e4%bb%a4"></a></h2><p>我们可以在 <a href="https://github.com/chaosblade-io/chaosblade/releases" target="_blank">Release</a> 页面下载最新版本的 ChaosBlade,解压后的结构如下：</p>
+<p>下面以创建 &ldquo;指定随机两个核满载&rdquo; 实验为例。直接运行 blade 二进制文件，执行后会返回执行结果以及当前故障的唯一 id。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./blade create cpu load --cpu-count 2
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>{&#34;code&#34;:200,&#34;success&#34;:true,&#34;result&#34;:&#34;d05c13c7101933c7&#34;}
+</span></span></code></pre></div><p>运行成功后在当前机器上将会启动一个 chaos_burncpu 的进程，将占用机器的 2 核 CPU。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/64/64720d8e03b8eb5d7c133c88ecaa40e6.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>其他场景的故障注入命令，可以参考<a href="https://chaosblade.io/docs" target="_blank">官网说明</a>，具体的故障场景能力以及实现细节，将在后续的执行器篇详细介绍。</p>
+<h2 id="故障模型">故障模型<a class="anchorjs-link" href="#%e6%95%85%e9%9a%9c%e6%a8%a1%e5%9e%8b"></a></h2><p>通过上面的使用样例，我们来聊一下故障模型，在上面的 CPU 满载的执行命令中，可以拆分为四部分。</p>
+<ol>
+<li>
+<p>对什么做混沌实验(CPU)</p>
+</li>
+<li>
+<p>混沌实验实施的范围是是什么(默认当前机器 Host)</p>
+</li>
+<li>
+<p>具体实施什么实验(满载 Load)</p>
+</li>
+<li>
+<p>实验生效的匹配条件有哪些(仅对其中两核 CPU 满载，cpu-list 2)</p>
+</li>
+</ol>
+<p>Chaosblade 通过以上四个部分将，将故障注入抽象出以下模型：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/18/18685571b6d58da8d2f2c4332c628389.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li>
+<p>Target：实验靶点，指实验发生的组件，例如 容器、应用框架（Dubbo、Redis、Zookeeper）等。</p>
+</li>
+<li>
+<p>Scope：实验实施的范围，指具体触发实验的机器或者集群等。</p>
+</li>
+<li>
+<p>Matcher：实验规则匹配器，根据所配置的 Target，定义相关的实验匹配规则，可以配置多个。由于每个 Target 可能有各自特殊的匹配条件，比如 RPC 领域的 HSF、Dubbo，可以根据服务提供者提供的服务和服务消费者调用的服务进行匹配，缓存领域的 Redis，可以根据 set、get 操作进行匹配。</p>
+</li>
+<li>
+<p>Action：指实验模拟的具体场景，Target 不同，实施的场景也不一样，比如磁盘，可以演练磁盘满，磁盘 IO 读写高，磁盘硬件故障等。如果是应用，可以抽象出延迟、异常、返回指定值（错误码、大对象等）、参数篡改、重复调用等实验场景。</p>
+</li>
+</ul>
+<h2 id="cli-指令">CLI 指令<a class="anchorjs-link" href="#cli-%e6%8c%87%e4%bb%a4"></a></h2><p>目前在 CLi 项目中支持多种操作指令，可以通过如下命令进行查看（对于这些 CLI 指令，如何生成的将在源码分析中介绍）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>./blade help
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>An easy to use and powerful chaos engineering experiment toolkit
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>Usage:
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>  blade [command]
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>Available Commands:
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  check       Check the environment for chaosblade
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>  create      Create a chaos engineering experiment
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>  destroy     Destroy a chaos experiment
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>  help        Help about any command
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>  prepare     Prepare to experiment
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>  query       Query the parameter values required for chaos experiments
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>  revoke      Undo chaos engineering experiment preparation
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>  server      Server mode starts, exposes web services
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>  status      Query preparation stage or experiment status
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>  version     Print version info
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>Flags:
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>  -d, --debug   Set client to DEBUG mode
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>  -h, --help    help for blade
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>Use &#34;blade [command] --help&#34; for more information about a command.
+</span></span></code></pre></div><h2 id="故障状态">故障状态<a class="anchorjs-link" href="#%e6%95%85%e9%9a%9c%e7%8a%b6%e6%80%81"></a></h2><p>可以通过如下命令，查询某一次故障注入的执行状态</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>./blade status 726c10d2bbffdbf7
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>        &#34;code&#34;: 200,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>        &#34;success&#34;: true,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>        &#34;result&#34;: {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>                &#34;Uid&#34;: &#34;726c10d2bbffdbf7&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>                &#34;Command&#34;: &#34;cpu&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>                &#34;SubCommand&#34;: &#34;fullload&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>                &#34;Flag&#34;: &#34; --cpu-count=2&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>                &#34;Status&#34;: &#34;Success&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>                &#34;Error&#34;: &#34;&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>                &#34;CreateTime&#34;: &#34;2023-02-18T13:07:18.801277194+08:00&#34;,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>                &#34;UpdateTime&#34;: &#34;2023-02-18T13:07:19.921206569+08:00&#34;
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>        }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>}
+</span></span></code></pre></div><p>也可以查询某中类型指令的故障执行状态</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./blade status --type create
+</span></span></code></pre></div><p>指令的执行结果状态一共分为如下几种：</p>
+<ol>
+<li>
+<p>Created：故障注入</p>
+</li>
+<li>
+<p>Success：故障注入命令执行成功</p>
+</li>
+<li>
+<p>Running：给 Java 和 C++故障场景使用的，当 java agent 挂载成功后，状态变为 Running。</p>
+</li>
+<li>
+<p>Error：故障注入命令执行失败</p>
+</li>
+<li>
+<p>Destroyed：销毁故障</p>
+</li>
+<li>
+<p>Revoked：撤销 Java 和 C++故障注入的前置工作，例如将 Java agent 卸载。</p>
+</li>
+</ol>
+<h1 id="chaosblade-cli-源码分析">ChaosBlade Cli 源码分析<a class="anchorjs-link" href="#chaosblade-cli-%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90"></a></h1><h2 id="初始化数据库">初始化数据库<a class="anchorjs-link" href="#%e5%88%9d%e5%a7%8b%e5%8c%96%e6%95%b0%e6%8d%ae%e5%ba%93"></a></h2><p>Chaosblade 使用SQLite记录执行故障模型数据，例如状态，错误信息等。在执行销毁和查询状态等命令时可以从SQLite中直接获取已存储的数据。（SQLite是一个进程内的库，实现了自给自足的、无服务器的、零配置的、事务性的 SQL 数据库。）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> (s <span style="color:#ff79c6">*</span>Source) <span style="color:#50fa7b">init</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   s.<span style="color:#50fa7b">CheckAndInitExperimentTable</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   s.<span style="color:#50fa7b">CheckAndInitPreTable</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">getConnection</span>() <span style="color:#ff79c6">*</span>sql.DB {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   database, err <span style="color:#ff79c6">:=</span> sql.<span style="color:#50fa7b">Open</span>(<span style="color:#f1fa8c">&#34;sqlite3&#34;</span>, path.<span style="color:#50fa7b">Join</span>(util.<span style="color:#50fa7b">GetProgramPath</span>(), dataFile))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   <span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>      log.<span style="color:#50fa7b">Fatalf</span>(context.<span style="color:#50fa7b">Background</span>(), <span style="color:#f1fa8c">&#34;open data file err, %s&#34;</span>, err.<span style="color:#50fa7b">Error</span>())
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>      <span style="color:#6272a4">//log.Error(err, &#34;open data file err&#34;)
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span><span style="color:#6272a4"></span>      <span style="color:#6272a4">//os.Exit(1)
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span><span style="color:#6272a4"></span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   <span style="color:#ff79c6">return</span> database
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>}
+</span></span></code></pre></div><h2 id="指令生成">指令生成<a class="anchorjs-link" href="#%e6%8c%87%e4%bb%a4%e7%94%9f%e6%88%90"></a></h2><p>在CLi项目启动时，会利用开源项目<a href="https://github.com/spf13/cobra" target="_blank">Cobra</a>(Cobra是一个用于创建强大的现代CLI应用程序的库)将项目中的yaml文件夹下的各个执行器中spec.yaml转换成Cobra Cli指令。</p>
+<p>关键代码如下：</p>
+<p>启动时运行CmdInit()构建CLi动作指令，例如Create Command</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">CmdInit</span>() <span style="color:#ff79c6">*</span>baseCommand {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   cli <span style="color:#ff79c6">:=</span> <span style="color:#50fa7b">NewCli</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   baseCmd <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">&amp;</span>baseCommand{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>      command: cli.rootCmd,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   <span style="color:#6272a4">// 省略......
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#6272a4"></span>   <span style="color:#6272a4">// add revoke command
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span><span style="color:#6272a4"></span>   baseCmd.<span style="color:#50fa7b">AddCommand</span>(<span style="color:#ff79c6">&amp;</span>RevokeCommand{})
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   <span style="color:#6272a4">// add create command
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#6272a4"></span>   createCommand <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">&amp;</span>CreateCommand{}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   baseCmd.<span style="color:#50fa7b">AddCommand</span>(createCommand)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   <span style="color:#6272a4">// 省略......
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span><span style="color:#6272a4"></span>   <span style="color:#ff79c6">return</span> baseCmd
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>}
+</span></span></code></pre></div><p>然后对Create指令添加Sub Command，主要就是添加各个故障场景的Command, 例如基础资源中的cpu、mem，Java中的dubbo、jvm，K8S等等</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">newBaseExpCommandService</span>(actionService actionCommandService) <span style="color:#ff79c6">*</span>baseExpCommandService {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   service <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">&amp;</span>baseExpCommandService{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>      commands:           <span style="color:#8be9fd;font-style:italic">make</span>(<span style="color:#8be9fd;font-style:italic">map</span>[<span style="color:#8be9fd">string</span>]<span style="color:#ff79c6">*</span>modelCommand, <span style="color:#bd93f9">0</span>),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>      executors:          <span style="color:#8be9fd;font-style:italic">make</span>(<span style="color:#8be9fd;font-style:italic">map</span>[<span style="color:#8be9fd">string</span>]spec.Executor, <span style="color:#bd93f9">0</span>),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>      bindFlagsFunc:      actionService.<span style="color:#50fa7b">bindFlagsFunction</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>      actionRunEFunc:     actionService.actionRunEFunc,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>      actionPostRunEFunc: actionService.actionPostRunEFunc,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   <span style="color:#6272a4">// 注册SubCommands
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#6272a4"></span>   service.<span style="color:#50fa7b">registerSubCommands</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   <span style="color:#ff79c6">for</span> _, command <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">range</span> service.commands {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>      <span style="color:#6272a4">// 添加到Create Command下
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span><span style="color:#6272a4"></span>      actionService.<span style="color:#50fa7b">CobraCmd</span>().<span style="color:#50fa7b">AddCommand</span>(command.<span style="color:#50fa7b">CobraCmd</span>())
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   <span style="color:#ff79c6">return</span> service
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>}
+</span></span></code></pre></div><p>以注册OS SubCommands举例子，</p>
+<ol>
+<li>
+<p>首先将会解析os-spec.yaml（文件中是各种基础资源类故障场景的描述文件），</p>
+</li>
+<li>
+<p>生成指令model，并为每一个基础资源类的故障场景都分配OS执行器客户端。</p>
+</li>
+<li>
+<p>将指令model转换为Corba Sub Command指令(对指令中添加描述信息，名称，别名，以及设置指令对应的运行函数)</p>
+</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4">// registerOsExpCommands
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span><span style="color:#6272a4"></span><span style="color:#8be9fd;font-style:italic">func</span> (ec <span style="color:#ff79c6">*</span>baseExpCommandService) <span style="color:#50fa7b">registerOsExpCommands</span>() []<span style="color:#ff79c6">*</span>modelCommand {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   <span style="color:#6272a4">// 读取当前blade程序同级别yaml目录下的chaosblade-os-spec-%s.yaml文件
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span><span style="color:#6272a4"></span>   file <span style="color:#ff79c6">:=</span> path.<span style="color:#50fa7b">Join</span>(util.<span style="color:#50fa7b">GetYamlHome</span>(), fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">&#34;chaosblade-os-spec-%s.yaml&#34;</span>, version.Ver))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   <span style="color:#6272a4">// 转换成指令model，并分配OS执行器客户端
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span><span style="color:#6272a4"></span>   models, err <span style="color:#ff79c6">:=</span> specutil.<span style="color:#50fa7b">ParseSpecsToModel</span>(file, os.<span style="color:#50fa7b">NewExecutor</span>())
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   <span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>      <span style="color:#ff79c6">return</span> <span style="color:#ff79c6">nil</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   osCommands <span style="color:#ff79c6">:=</span> <span style="color:#8be9fd;font-style:italic">make</span>([]<span style="color:#ff79c6">*</span>modelCommand, <span style="color:#bd93f9">0</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   <span style="color:#ff79c6">for</span> idx <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">range</span> models.Models {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>      model <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">&amp;</span>models.Models[idx]
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>      command <span style="color:#ff79c6">:=</span> ec.<span style="color:#50fa7b">registerExpCommand</span>(model, <span style="color:#f1fa8c">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>      osCommands = <span style="color:#8be9fd;font-style:italic">append</span>(osCommands, command)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>   <span style="color:#ff79c6">return</span> osCommands
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span><span style="color:#6272a4">// registerActionCommand 对指令中添加描述信息，名称，别名，以及设置指令对应的运行函数
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span><span style="color:#6272a4"></span><span style="color:#8be9fd;font-style:italic">func</span> (ec <span style="color:#ff79c6">*</span>baseExpCommandService) <span style="color:#50fa7b">registerActionCommand</span>(target, scope <span style="color:#8be9fd">string</span>, actionCommandSpec spec.ExpActionCommandSpec) <span style="color:#ff79c6">*</span>actionCommand {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>   <span style="color:#6272a4">// 省略......
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span><span style="color:#6272a4"></span>   command.command = <span style="color:#ff79c6">&amp;</span>cobra.Command{
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>      Use:      actionCommandSpec.<span style="color:#50fa7b">Name</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>      Aliases:  actionCommandSpec.<span style="color:#50fa7b">Aliases</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>      Short:    actionCommandSpec.<span style="color:#50fa7b">ShortDesc</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>      Long:     actionCommandSpec.<span style="color:#50fa7b">LongDesc</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>      Example:  actionCommandSpec.<span style="color:#50fa7b">Example</span>(),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>      <span style="color:#6272a4">// 设置指令对应的运行函数actionRunEFunc
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span><span style="color:#6272a4"></span>      RunE:     ec.<span style="color:#50fa7b">actionRunEFunc</span>(target, scope, command, actionCommandSpec),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>      PostRunE: ec.<span style="color:#50fa7b">actionPostRunEFunc</span>(command),
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>   <span style="color:#6272a4">// 省略......
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span><span style="color:#6272a4"></span>  <span style="color:#ff79c6">return</span> command
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35</span><span>}
+</span></span></code></pre></div><p>通过图来看CLI的启动流程比较清晰，感兴趣的同学可以根据图和上面的代码进行源码阅读：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/e1/e1def9246a63d113c1b6132af0af5c17.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="指令执行">指令执行<a class="anchorjs-link" href="#%e6%8c%87%e4%bb%a4%e6%89%a7%e8%a1%8c"></a></h2><p>在指令生成时我们已经对Cobar Command设置了对应的运行函数actionRunEFunc(),也就是说当我们在控制台执行blade故障命令后，Cobar会将请求路由到我们指定的actionRunEFunc函数中。</p>
+<p>那么在actionRunEFunc都做了哪些事情呢？由于actionRunEFunc中代码比较长，这里就不粘贴了，流程如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/e9/e9b81f3f625c705fc34de866de6fd7c0.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="执行器">执行器<a class="anchorjs-link" href="#%e6%89%a7%e8%a1%8c%e5%99%a8"></a></h2><p>在CLI中支持的执行器客户端类型有多种，执行器则是代表支持哪些种类的故障场景。在文章的开篇已经介绍过了，每个执行器的客户端运行思路基本差不多。例如：</p>
+<ul>
+<li>OS 执行器客户端是调用ChaosBlade程序中的bin目录下的chaos_os可执行文件，在chaos_os可执行文件中会真正的进行基础资源类故障。</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>chaosOsBin <span style="color:#ff79c6">:=</span> path.<span style="color:#50fa7b">Join</span>(util.<span style="color:#50fa7b">GetProgramPath</span>(), <span style="color:#f1fa8c">&#34;bin&#34;</span>, spec.ChaosOsBin)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>command <span style="color:#ff79c6">:=</span> os_exec.<span style="color:#50fa7b">CommandContext</span>(ctx, chaosOsBin, argsArray<span style="color:#ff79c6">...</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>log.<span style="color:#50fa7b">Debugf</span>(ctx, <span style="color:#f1fa8c">&#34;run command, %s %v&#34;</span>, chaosOsBin, argsArray)
+</span></span></code></pre></div><ul>
+<li>Java 执行器客户端要相对复杂一些，由于java的故障场景底层都是利用JVM-Sandbox开源项目完成的agent挂载和字节码增强，所以需要调用JVM-SandBox接口来完成故障注入/销毁的指令。</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#6272a4">// createUrl中会拼接SandBox的地址和端口
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span><span style="color:#6272a4"></span>url, body, resp <span style="color:#ff79c6">:=</span> e.<span style="color:#50fa7b">createUrl</span>(ctx, port, model)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span><span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>   <span style="color:#ff79c6">return</span> resp
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>result, err, code = util.<span style="color:#50fa7b">PostCurl</span>(url, body, <span style="color:#f1fa8c">&#34;&#34;</span>)
+</span></span></code></pre></div><ul>
+<li>K8S 执行器客户端是通过调用K8S接口，对ChaosBlade自定义资源完成的资源变更，然后ChaosBlade Operator利用list/watch机制实现的故障注入/清除</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">create</span>(cli client.Client, chaosblade <span style="color:#ff79c6">*</span>v1alpha1.ChaosBlade) (result <span style="color:#ff79c6">*</span>v1alpha1.ChaosBlade, err <span style="color:#8be9fd">error</span>) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>   err = cli.<span style="color:#50fa7b">Create</span>(context.<span style="color:#50fa7b">TODO</span>(), chaosblade)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>   <span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>      <span style="color:#ff79c6">return</span> <span style="color:#ff79c6">nil</span>, err
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>   <span style="color:#ff79c6">return</span> <span style="color:#50fa7b">get</span>(cli, chaosblade.Name)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>}
+</span></span></code></pre></div><p>其他故障执行器的客户端实现也基本相同，在这里就不一一赘述了。</p>
+<h1 id="总结">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93"></a></h1><p>ChaosBlade Tool是一个的故障注入工具箱，有CLI项目以及多个故障执行器组件构成，它开箱即用，并提供了多种场景的故障注入能力，其中包括基础资源、Java应用、K8S、Docker、CRI、中间件、云平台、C++等。</p>
+<p>ChaosBlade Cli是故障工具箱中的触发者，它提供故障指令的生成,接收用户的command指令，分发指令到不同的执行器中去运行，它的源码相对简单，并不涉及真正的故障注入能力。</p>
+<h1 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h1><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/chaosblade-1/" data-toggle="tooltip" data-placement="top" title="混沌工程之 ChaosBlade 利刃出鞘">
+              Previous<br>
+              <span>混沌工程之 ChaosBlade 利刃出鞘</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>

@@ -6,7 +6,16 @@
     <description>Recent content in chaosblade on binbin0325</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 13 Aug 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/chaosblade/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 17 Aug 2023 09:50:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/chaosblade/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>混沌工程之 ChaosBlade 故障注入百宝箱</title>
+      <link>https://binbin0325.github.io/posts/chaosblade-tool/</link>
+      <pubDate>Thu, 17 Aug 2023 09:50:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/chaosblade-tool/</guid>
+      <description>前言在上文中对 ChaosBlade 进行了整体介绍，其中主要分为 ChaosBlade Box 以及 ChaosBlade Tool 两大部分，ChaosBlade Box 提供了可视化的管理控制台。真正的故障注入能力是由 ChaosBlade Tool</description>
+    </item>
+    
     <item>
       <title>混沌工程之 ChaosBlade 利刃出鞘</title>
       <link>https://binbin0325.github.io/posts/chaosblade-1/</link>
