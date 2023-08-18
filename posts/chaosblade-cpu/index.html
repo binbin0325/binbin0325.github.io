@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>揭秘ChaosBlade CPU故障：实现CPU故障的黑科技 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技"/>
+<meta name="twitter:description" content="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技."/>
+
+  <meta property="og:title" content="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技" />
+<meta property="og:description" content="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/chaosblade-cpu/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-08-18T09:50:54+08:00" />
+<meta property="article:modified_time" content="2023-08-18T09:50:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-tool/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-hotspot/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-data/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/linux_namespace_cgroup/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/series/themes-guide/" title="Guide">Guide</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/chaos/" title="chaos">chaos</a>
+            
+            <a class="tag" href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/" title="混沌工程">混沌工程</a>
+            
+            <a class="tag" href="/tags/chaosblade/" title="chaosblade">chaosblade</a>
+            
+          </div>
+          <h1>揭秘ChaosBlade CPU故障：实现CPU故障的黑科技</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Fri, Aug 18, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="引言">引言<a class="anchorjs-link" href="#%e5%bc%95%e8%a8%80"></a></h1><p>在接下来的文章中会主要介绍 ChaosBlade 基础资源类的故障场景以及底层实现原理，目前 ChaosBlade 已支持的基础资源类故障场景如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/62/62c02efa3322b56a325635829651a9fd.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h1 id="介绍">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d"></a></h1><p>服务器的稳定性和性能优化对于保障业务的顺利运行至关重要。然而，服务器 CPU 负载的异常升高往往会导致服务响应时长增加、任务处理速度变慢甚至系统假死等问题。为了更好地了解系统性能，增强系统的稳定性，以及提高应对故障的能力，开发人员和系统管理员需要一种有效的方式来模拟 CPU 负载故障。而在这里，我们将引入 ChaosBlade，一个强大的工具，用于模拟故障并帮助用户实现 CPU 负载的升高</p>
+<p>下面是一些 CPU 负载故障注入的验证场景：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/a6/a60a311ec3d936f2f8fbb59f5e2b0cbd.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>通过本文我们将了解如何利用 ChaosBlade 实现 CPU 负载故障的模拟，同时会深入挖掘 ChaosBlade CPU 故障模拟的核心代码，了解其实现机制。项目地址： <a href="https://github.com/chaosblade-io/chaosblade-exec-os" target="_blank">https://github.com/chaosblade-io/chaosblade-exec-os</a></p>
+<h1 id="粗暴实现">粗暴实现<a class="anchorjs-link" href="#%e7%b2%97%e6%9a%b4%e5%ae%9e%e7%8e%b0"></a></h1><p>在介绍 ChaosBlade 模拟 CPU 故障的实现之前，我们先了解下最简单的实现：有多少核心就开启多少个协程/线程去跑 for 循环，例如在 golang 中可以按照如下方式打满 CPU 的使用率。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">main</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   cpuCount <span style="color:#ff79c6">:=</span> runtime.<span style="color:#50fa7b">NumCPU</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>   <span style="color:#ff79c6">for</span> i <span style="color:#ff79c6">:=</span> <span style="color:#bd93f9">0</span>; i &lt; cpuCount; i<span style="color:#ff79c6">++</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>      <span style="color:#ff79c6">go</span> <span style="color:#8be9fd;font-style:italic">func</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>         <span style="color:#ff79c6">for</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>         }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>      }()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   <span style="color:#ff79c6">select</span> {}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>}
+</span></span></code></pre></div><p>不过这样的模拟 CPU 负载实在过于简单粗暴，往往现实场景要比这个复杂的多，例如在多核（大于 1 个核心）CPU 机器中, 由于突然过来一波大流量/或者定时任务触发等各种原因，导致 CPU 使用率瞬时打满或阶梯式升高等，那么这种粗暴简单的实现明显不能满足于复杂的现实场景</p>
+<h1 id="chaosblade-cpu-故障模拟">ChaosBlade CPU 故障模拟<a class="anchorjs-link" href="#chaosblade-cpu-%e6%95%85%e9%9a%9c%e6%a8%a1%e6%8b%9f"></a></h1><h2 id="功能介绍">功能介绍<a class="anchorjs-link" href="#%e5%8a%9f%e8%83%bd%e4%bb%8b%e7%bb%8d"></a></h2><p>目前 ChaosBlade 支持 CPU 负载场景，包括</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/a2/a29a0a0c6a0428f118adfc97e855cebf.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>负载填充也分为几种方式：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/d1/d1f5dd39041db5b575342d84e127da1c.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="安装与使用">安装与使用<a class="anchorjs-link" href="#%e5%ae%89%e8%a3%85%e4%b8%8e%e4%bd%bf%e7%94%a8"></a></h2><p>首先可以下载 ChaosBlade Tool 工具包，下载地址 <a href="https://github.com/chaosblade-io/chaosblade/releases" target="_blank">https://github.com/chaosblade-io/chaosblade/releases</a> ，下载后解压到要注入故障的目标机器中执行命令即可。</p>
+<p><strong>命令格式：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./blade create cpu load <span style="color:#ff79c6">[</span>flags<span style="color:#ff79c6">]</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>参数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>--timeout string        设定运行时长，单位是秒，通用参数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>--cpu-count string      指定 CPU 满载的个数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>--cpu-list string       指定 CPU 满载的具体核，核索引从 <span style="color:#bd93f9">0</span> 开始 <span style="color:#ff79c6">(</span>0-3 or 1,3<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>--cpu-percent string    指定 CPU 负载百分比，取值在 0-100
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>--climb-time            指定 CPU 负载到目标值的时间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">9</span><span>--cgroup-root           指定 cgroup 路径，在容器环境中使用
+</span></span></code></pre></div><p><strong>使用案例：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4"># 创建 CPU 满载实验</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>blade create cpu load
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"># 返回结果如下</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;code&#34;</span>:200,<span style="color:#f1fa8c">&#34;success&#34;</span>:true,<span style="color:#f1fa8c">&#34;result&#34;</span>:<span style="color:#f1fa8c">&#34;beeaaf3a7007031d&#34;</span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#6272a4"># code 的值等于 200 说明执行成功，其中 result 的值就是 uid。使用 top 命令验证实验效果</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>Tasks: <span style="color:#bd93f9">100</span> total, <span style="color:#bd93f9">2</span> running, <span style="color:#bd93f9">98</span> sleeping, <span style="color:#bd93f9">0</span> stopped, <span style="color:#bd93f9">0</span> zombie
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>%Cpu0 : 21.3 us, 78.7 sy, 0.0 ni, 0.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>%Cpu1 : 20.9 us, 79.1 sy, 0.0 ni, 0.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>%Cpu2 : 20.5 us, 79.5 sy, 0.0 ni, 0.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>%Cpu3 : 20.9 us, 79.1 sy, 0.0 ni, 0.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span><span style="color:#6272a4"># 4 核都满载，实验生效，销毁实验</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>blade destroy beeaaf3a7007031d
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span><span style="color:#6272a4"># 返回结果如下</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;code&#34;</span>:200,<span style="color:#f1fa8c">&#34;success&#34;</span>:true,<span style="color:#f1fa8c">&#34;result&#34;</span>:<span style="color:#f1fa8c">&#34;command: cpu load --help false --debug false&#34;</span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span><span style="color:#6272a4"># 指定随机两个核满载</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>blade create cpu load --cpu-count <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span><span style="color:#6272a4"># 使用 top 命令验证结果如下，实验生效</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>Tasks: <span style="color:#bd93f9">100</span> total, <span style="color:#bd93f9">2</span> running, <span style="color:#bd93f9">98</span> sleeping, <span style="color:#bd93f9">0</span> stopped, <span style="color:#bd93f9">0</span> zombie
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>%Cpu0 : 17.9 us, 75.1 sy, 0.0 ni, 7.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span>%Cpu1 : 3.0 us, 6.7 sy, 0.0 ni, 90.3 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>%Cpu2 : 0.7 us, 0.7 sy, 0.0 ni, 98.7 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span>%Cpu3 : 19.7 us, 80.3 sy, 0.0 ni, 0.0 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+</span></span></code></pre></div><h2 id="核心源码解析">核心源码解析<a class="anchorjs-link" href="#%e6%a0%b8%e5%bf%83%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90"></a></h2><p>下面将通过核心代码，重点分析下 CPU 故障注入的实现原理，这里有几个<strong>关键点</strong>将会分别介绍</p>
+<h3 id="如何获取正确的-cpu-使用率">如何获取正确的 CPU 使用率<a class="anchorjs-link" href="#%e5%a6%82%e4%bd%95%e8%8e%b7%e5%8f%96%e6%ad%a3%e7%a1%ae%e7%9a%84-cpu-%e4%bd%bf%e7%94%a8%e7%8e%87"></a></h3><p>在实现 CPU 负载故障时，获取正确的 CPU 使用率是至关重要的，CPU 使用率是指在特定时间段内，CPU 执行非空闲状态任务的时间与总时间之比，通常以百分比表示。它反映了 CPU 在一段时间内的忙碌程度或负载情况。例如，如果在过去的一秒钟内，CPU 有 800 毫秒的时间是处于忙碌状态，那么 CPU 使用率就是 80%(800 毫秒除以总的 1000 毫秒，再乘以 100)</p>
+<p><strong>物理机</strong></p>
+<p>这里以 Linux 系统举例可以通过读取**/proc/stat** 文件，它提供了关于系统和 CPU 的各种统计信息。这些统计信息是实时更新的，可以用于监视系统性能和资源利用情况。</p>
+<p>在大多数情况使用上面方式就可以正确获取到 CPU 使用率了，但是在容器环境中，如果读取**/proc/stat** 是获取的宿主机的 CPU 统计信息，而不是容器本身的，例如在容器中执行 <strong><code>top</code></strong> 命令时，获取的信息是宿主机（物理机）的信息，而不是容器内部的信息，因为top 命令访问的是容器进程在宿主机上的 <strong><code>/proc</code></strong> 目录，所以得到的信息是宿主机上的信息，那么我们如何在容器中获取正确的 CPU 使用率呢？</p>
+<p><strong>容器</strong></p>
+<p>容器技术（如 Docker）本身会在容器启动时使用 <strong>cgroup</strong> 来对容器的资源进行管理和隔离。想查看容器的 cgroup 配置，可以在宿主机上使用 <code>ls</code> 命令查看 <code>**/sys/fs/cgroup/**</code> 目录。在这个目录下，能够找到与容器相关的 cgroup 目录，其名称通常与容器的 ID 或名称相关联。进入容器的 cgroup 目录后，你将看到与容器资源相关的文件和子目录，如 <code>cpu</code>, <code>memory</code>, <code>blkio</code> 等，这些子目录用于配置和管理相应资源的限制。</p>
+<p>在 ChaosBlade 中也是按照这两种不同环境分别获取的 CPU 使用率，获取物理机中的 CPU 使用率是直接使用开源库 gopsutil（底层实现也是读取/proc/stat 文件）</p>
+<p>代码路径在 cpu/cpu_liunx.go#getUsed func：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">getUsed</span>(ctx context.Context, percpu <span style="color:#8be9fd">bool</span>, cpuIndex <span style="color:#8be9fd">int</span>) <span style="color:#8be9fd">float64</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span> pid <span style="color:#ff79c6">:=</span> ctx.<span style="color:#50fa7b">Value</span>(channel.NSTargetFlagName)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span> cpuCount <span style="color:#ff79c6">:=</span> ctx.<span style="color:#50fa7b">Value</span>(<span style="color:#f1fa8c">&#34;cpuCount&#34;</span>).(<span style="color:#8be9fd">int</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span> <span style="color:#6272a4">// 容器中获取 CPU 使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"></span> <span style="color:#ff79c6">if</span> pid <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>  cgroupRoot = <span style="color:#f1fa8c">&#34;/sys/fs/cgroup/&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>  cgroup, err <span style="color:#ff79c6">:=</span> cgroups.<span style="color:#50fa7b">Load</span>(exec.<span style="color:#50fa7b">Hierarchy</span>(cgroupRoot.(<span style="color:#8be9fd">string</span>)), exec.<span style="color:#50fa7b">PidPath</span>(p))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>  stats, err <span style="color:#ff79c6">:=</span> cgroup.<span style="color:#50fa7b">Stat</span>(cgroups.IgnoreNotExist)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   pre <span style="color:#ff79c6">:=</span> <span style="color:#8be9fd;font-style:italic">float64</span>(stats.CPU.Usage.Total) <span style="color:#ff79c6">/</span> <span style="color:#8be9fd;font-style:italic">float64</span>(time.Second)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   time.<span style="color:#50fa7b">Sleep</span>(time.Second)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   nextStats, err <span style="color:#ff79c6">:=</span> cgroup.<span style="color:#50fa7b">Stat</span>(cgroups.IgnoreNotExist)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>    next <span style="color:#ff79c6">:=</span> <span style="color:#8be9fd;font-style:italic">float64</span>(nextStats.CPU.Usage.Total) <span style="color:#ff79c6">/</span> <span style="color:#8be9fd;font-style:italic">float64</span>(time.Second)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>    <span style="color:#ff79c6">return</span> ((next <span style="color:#ff79c6">-</span> pre) <span style="color:#ff79c6">*</span> <span style="color:#bd93f9">100</span>) <span style="color:#ff79c6">/</span> <span style="color:#8be9fd;font-style:italic">float64</span>(cpuCount)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span> }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span> 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span><span style="color:#6272a4">// 物理机中获取 CPU 使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span><span style="color:#6272a4"></span> totalCpuPercent, err <span style="color:#ff79c6">:=</span> cpu.<span style="color:#50fa7b">Percent</span>(time.Second, percpu)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span> <span style="color:#ff79c6">if</span> percpu {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span> <span style="color:#6272a4">// 获取具体的 CPU 核心对应的使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span><span style="color:#6272a4"></span>  <span style="color:#ff79c6">return</span> totalCpuPercent[cpuIndex]
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span> }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span> <span style="color:#ff79c6">return</span> totalCpuPercent[<span style="color:#bd93f9">0</span>]
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>}
+</span></span></code></pre></div><h3 id="获取正确的-cpu-核心数">获取正确的 CPU 核心数<a class="anchorjs-link" href="#%e8%8e%b7%e5%8f%96%e6%ad%a3%e7%a1%ae%e7%9a%84-cpu-%e6%a0%b8%e5%bf%83%e6%95%b0"></a></h3><p>当用户指定 full load 参数时会对全部的核心注入 CPU 故障，那么如何获取当前环境中 CPU 核心数就非常重要了。</p>
+<p>获取 CPU 核心数，可以使用 golang 中的 **runtime.NumCPU()**函数，但是在容器环境下这样获取是不准确的，<strong>runtime.NumCPU</strong> 函数返回的是容器所在宿主机的 CPU 核心数，而不是容器自身的 CPU 核心数 。其实这个问题的解决思路和上面获取 CPU 使用率有点相似，首先获取到当前进程的 cgroup 路径，然后读取 <strong>cpu.cfs_quota_us</strong> 和 <strong>cpu.cfs_period_us</strong> 文件去计算核心数。</p>
+<p>计算规则：<strong>cpu.cfs_quota_us/cpu.cfs_period_us=容器核心数</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>cpu_period_us:该文件用于设置 CPU 资源的周期时间。例如，如果将 cpu_period_us 设置为 100000 (100 ms），则 cgroup 中的进程可以在每个 100 毫秒的时间段内使用 CPU 资源。 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>cpu_quota_us:该文件用于设置 CPU 资源的配额，如果 cpu_quota_us 的值小于 cpu_period_us，则表示对 CPU 资源进行限制。进程只能在 cpu_quota_us 设置的时间内使用 CPU，超过此时间将被限制。 
+</span></span></code></pre></div><p>在 ChaosBlade 中是利用 Uber 开源的 <a href="https://github.com/uber-go/automaxprocs" target="_blank">automaxprocs</a> 库来设置核心数的，其底层实现分为 cgroup v1 和 v2 版本，在 cgroup v1 版本中就是按照上面说的方式实现的。</p>
+<h3 id="注入本质">注入本质<a class="anchorjs-link" href="#%e6%b3%a8%e5%85%a5%e6%9c%ac%e8%b4%a8"></a></h3><p>其实注入的本质依然是 for 循环，根据用户设置的要注入的核心数量，开启对应的 goroutine，在 goroutine 里实现 for 循环，但是如何控制 CPU 负载的比例以及在指定时间范围内负载到目标值，则是需要特殊实现的。</p>
+<p><strong>填充（提升 CPU 负载）</strong></p>
+<p>代码路径在 cpu/cpu.go#burn func：burn 函数负责真正的提升 CPU 负载，接收的参数：</p>
+<ol>
+<li>
+<p>quota：负责更新要提升的配额（根据 CPU 使用率以及目标值进行计算）</p>
+</li>
+<li>
+<p>slopePercent：填充的 CPU 比例（根据填充时间动态计算，如果填充时间为空则等于用户传入的填充比例）</p>
+</li>
+<li>
+<p>percpu：是否让特定的 CPU 核心负载提升</p>
+</li>
+<li>
+<p>cpuIndex：特定的 CPU 核心索引位置</p>
+</li>
+</ol>
+<p>重点代码通过注释标注：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">burn</span>(ctx context.Context, quota <span style="color:#ff79c6">&lt;-</span><span style="color:#8be9fd;font-style:italic">chan</span> <span style="color:#8be9fd">int64</span>, slopePercent <span style="color:#8be9fd">float64</span>, percpu <span style="color:#8be9fd">bool</span>, cpuIndex <span style="color:#8be9fd">int</span>) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span> <span style="color:#6272a4">// 获取初次填充负载的 CPU 配额(目标值)，假设负载的 CPU 使用率=100，当前使用率=20，那么 q=800000000
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span><span style="color:#6272a4"></span> q <span style="color:#ff79c6">:=</span> <span style="color:#50fa7b">getQuota</span>(ctx, slopePercent, percpu, cpuIndex)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span> <span style="color:#6272a4">// 计算休息间隔=1000000000-800000000=200000000
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"></span> ds <span style="color:#ff79c6">:=</span> period <span style="color:#ff79c6">-</span> q
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span> <span style="color:#ff79c6">if</span> ds &lt; <span style="color:#bd93f9">0</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>  ds = <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span> }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span> <span style="color:#6272a4">// 计算休息间隔时间=200ms
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#6272a4"></span> s, _ <span style="color:#ff79c6">:=</span> time.<span style="color:#50fa7b">ParseDuration</span>(strconv.<span style="color:#50fa7b">FormatInt</span>(ds, <span style="color:#bd93f9">10</span>) <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#34;ns&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span> <span style="color:#ff79c6">for</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  <span style="color:#6272a4">// 调度开始时间
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span><span style="color:#6272a4"></span>  startTime <span style="color:#ff79c6">:=</span> time.<span style="color:#50fa7b">Now</span>().<span style="color:#50fa7b">UnixNano</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>  <span style="color:#ff79c6">select</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>  <span style="color:#ff79c6">case</span> offset <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">&lt;-</span>quota:
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>   <span style="color:#6272a4">// 更新负载填充的配额
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span><span style="color:#6272a4"></span>   q = q <span style="color:#ff79c6">+</span> offset
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   <span style="color:#ff79c6">if</span> q &lt; <span style="color:#bd93f9">0</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>    q = <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>   ds <span style="color:#ff79c6">:=</span> period <span style="color:#ff79c6">-</span> q
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>   <span style="color:#ff79c6">if</span> ds &lt; <span style="color:#bd93f9">0</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>    ds = <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>   <span style="color:#6272a4">// 重新计算休息时间,（配额越大，休息时间越短）
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span><span style="color:#6272a4"></span>   s, _ = time.<span style="color:#50fa7b">ParseDuration</span>(strconv.<span style="color:#50fa7b">FormatInt</span>(ds, <span style="color:#bd93f9">10</span>) <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#34;ns&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>  <span style="color:#ff79c6">default</span>:
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>   <span style="color:#6272a4">// for 循环占用 CPU，直到大于要填充的配额时停止
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span><span style="color:#6272a4"></span>   <span style="color:#ff79c6">for</span> time.<span style="color:#50fa7b">Now</span>().<span style="color:#50fa7b">UnixNano</span>()<span style="color:#ff79c6">-</span>startTime &lt; q {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>   <span style="color:#6272a4">// 主动让出当前 goroutine 的执行时间片
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span><span style="color:#6272a4"></span>   runtime.<span style="color:#50fa7b">Gosched</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>   <span style="color:#6272a4">// 休息，准备继续下次填充
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span><span style="color:#6272a4"></span>   time.<span style="color:#50fa7b">Sleep</span>(s)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36</span><span> }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37</span><span>}
+</span></span></code></pre></div><p><strong>获取配额</strong></p>
+<p>代码路径在 cpu/cpu.go#getQuota func 中，首先获取 CPU 正确的使用率，然后计算当前要填充的配额 ，计算方式（要填充的比例-当前CPU使用率）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">getQuota</span>(ctx context.Context, slopePercent <span style="color:#8be9fd">float64</span>, percpu <span style="color:#8be9fd">bool</span>, cpuIndex <span style="color:#8be9fd">int</span>) <span style="color:#8be9fd">int64</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span> <span style="color:#6272a4">// 获取 CPU 正确的使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span><span style="color:#6272a4"></span> used <span style="color:#ff79c6">:=</span> <span style="color:#50fa7b">getUsed</span>(ctx, percpu, cpuIndex)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span> <span style="color:#6272a4">// 计算当前要填充的配额 = 要填充的比例-使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span><span style="color:#6272a4"></span> <span style="color:#6272a4">// 填充的 CPU 比例（根据填充时间动态计算，如果填充时间为空则等于填充比例）
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span><span style="color:#6272a4"></span> dx <span style="color:#ff79c6">:=</span> (slopePercent <span style="color:#ff79c6">-</span> used) <span style="color:#ff79c6">/</span> <span style="color:#bd93f9">100</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span> busy <span style="color:#ff79c6">:=</span> <span style="color:#8be9fd;font-style:italic">int64</span>(dx <span style="color:#ff79c6">*</span> <span style="color:#8be9fd;font-style:italic">float64</span>(period))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span> <span style="color:#ff79c6">return</span> busy
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">9</span><span>}
+</span></span></code></pre></div><h3 id="特定时间内-cpu-负载爬升到目标值">特定时间内 CPU 负载爬升到目标值<a class="anchorjs-link" href="#%e7%89%b9%e5%ae%9a%e6%97%b6%e9%97%b4%e5%86%85-cpu-%e8%b4%9f%e8%bd%bd%e7%88%ac%e5%8d%87%e5%88%b0%e7%9b%ae%e6%a0%87%e5%80%bc"></a></h3><p>这里最重要的调控填充比例，填充比例的动态更新是根据<strong>填充时间参数(climbTime)</strong>，动态计算出来的，利用定时器 Ticker 每秒更新一次</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">slope</span>(ctx context.Context, cpuPercent <span style="color:#8be9fd">int</span>, climbTime <span style="color:#8be9fd">int</span>, slopePercent <span style="color:#ff79c6">*</span><span style="color:#8be9fd">float64</span>, percpu <span style="color:#8be9fd">bool</span>, cpuIndex <span style="color:#8be9fd">int</span>) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span> <span style="color:#6272a4">// 如果填充时间不等于 0
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span><span style="color:#6272a4"></span> <span style="color:#ff79c6">if</span> climbTime <span style="color:#ff79c6">!=</span> <span style="color:#bd93f9">0</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span> <span style="color:#6272a4">// 创建定时器，每秒运行一次
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"></span>  <span style="color:#8be9fd;font-style:italic">var</span> ticker = time.<span style="color:#50fa7b">NewTicker</span>(time.Second)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>  <span style="color:#6272a4">// 获取当前 CPU 使用率
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#6272a4"></span>  <span style="color:#ff79c6">*</span>slopePercent = <span style="color:#50fa7b">getUsed</span>(ctx, percpu, cpuIndex)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>  <span style="color:#6272a4">// 获取起始 CPU 填充比例
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span><span style="color:#6272a4"></span>  <span style="color:#8be9fd;font-style:italic">var</span> startPercent = <span style="color:#8be9fd;font-style:italic">float64</span>(cpuPercent) <span style="color:#ff79c6">-</span> <span style="color:#ff79c6">*</span>slopePercent
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>  <span style="color:#ff79c6">go</span> <span style="color:#8be9fd;font-style:italic">func</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   <span style="color:#6272a4">// 异步定时更新填充比例
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span><span style="color:#6272a4"></span>   <span style="color:#ff79c6">for</span> <span style="color:#ff79c6">range</span> ticker.C {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>    <span style="color:#ff79c6">if</span> <span style="color:#ff79c6">*</span>slopePercent &lt; <span style="color:#8be9fd;font-style:italic">float64</span>(cpuPercent) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>     <span style="color:#ff79c6">*</span>slopePercent <span style="color:#ff79c6">+=</span> startPercent <span style="color:#ff79c6">/</span> <span style="color:#8be9fd;font-style:italic">float64</span>(climbTime)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>    } <span style="color:#ff79c6">else</span> <span style="color:#ff79c6">if</span> <span style="color:#ff79c6">*</span>slopePercent &gt; <span style="color:#8be9fd;font-style:italic">float64</span>(cpuPercent) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>     <span style="color:#ff79c6">*</span>slopePercent <span style="color:#ff79c6">-=</span> startPercent <span style="color:#ff79c6">/</span> <span style="color:#8be9fd;font-style:italic">float64</span>(climbTime)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>    }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>  }()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span> }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>}
+</span></span></code></pre></div><h3 id="指定具体核心负载">指定具体核心负载<a class="anchorjs-link" href="#%e6%8c%87%e5%ae%9a%e5%85%b7%e4%bd%93%e6%a0%b8%e5%bf%83%e8%b4%9f%e8%bd%bd"></a></h3><p>这里指的是根据用户参数 cpu-list,让特定某一个/几个核心使用率提升，而其他的核心不受影响，实现这一能力的核心是利用 Linux 的 <strong>taskset</strong> 命令。</p>
+<p>在 Linux 系统中，<strong>taskset</strong> 是一个用于绑定或修改进程的 CPU 亲和性（CPU Affinity）的命令行工具。CPU 亲和性是指将一个或多个进程绑定到特定的 CPU 核心上，从而限制它们只在指定的 CPU 上运行，而不会在其他 CPU 上执行。这样做的目的是为了优化性能，减少由于在不同 CPU 之间切换导致的缓存失效和上下文切换的开销。</p>
+<p>关键代码如下：</p>
+<p>当用户输入 cpu-list 参数时，故障并没用真正的执行，而是利用 <strong>taskset</strong> 对具体核心以及故障命令做了亲和性绑定，然后重新调度的 cpu 故障指令，从而使故障指令和核心绑定。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#ff79c6">if</span> cpuList <span style="color:#ff79c6">!=</span> <span style="color:#f1fa8c">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span><span style="color:#6272a4">// 遍历 cpu-list 参数
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span><span style="color:#6272a4"></span> <span style="color:#ff79c6">for</span> _, core <span style="color:#ff79c6">:=</span> <span style="color:#ff79c6">range</span> cores {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span> <span style="color:#6272a4">// 生成指定具体核心的 CPU 故障注入命令
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"></span>  args <span style="color:#ff79c6">:=</span> fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">`%s create cpu fullload --cpu-count 1 --cpu-percent %d --climb-time %d --cpu-index %s --uid %s`</span>,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   os.Args[<span style="color:#bd93f9">0</span>], cpuPercent, climbTime, core, ctx.<span style="color:#50fa7b">Value</span>(spec.Uid))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span> <span style="color:#6272a4">// 将 taskset -c 参数绑定指定的核心和要执行的故障注入命令
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span><span style="color:#6272a4"></span>  args = fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">&#34;-c %s %s&#34;</span>, core, args)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>  argsArray <span style="color:#ff79c6">:=</span> strings.<span style="color:#50fa7b">Split</span>(args, <span style="color:#f1fa8c">&#34; &#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>  <span style="color:#6272a4">// 运行 taskset
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span><span style="color:#6272a4"></span>  command <span style="color:#ff79c6">:=</span> os_exec.<span style="color:#50fa7b">CommandContext</span>(ctx, <span style="color:#f1fa8c">&#34;taskset&#34;</span>, argsArray<span style="color:#ff79c6">...</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  command.SysProcAttr = <span style="color:#ff79c6">&amp;</span>syscall.SysProcAttr{}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>  <span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">:=</span> command.<span style="color:#50fa7b">Start</span>(); err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   <span style="color:#ff79c6">return</span> spec.<span style="color:#50fa7b">ReturnFail</span>(spec.OsCmdExecFailed, fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">&#34;taskset exec failed, %v&#34;</span>, err))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span> }
+</span></span></code></pre></div><h3 id="回滚">回滚<a class="anchorjs-link" href="#%e5%9b%9e%e6%bb%9a"></a></h3><p>停止 CPU 故障注入的实现相对简单很多，只需要找到故障注入指令运行的进程，然后 <strong>kill</strong> 掉即可。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>ps, _ <span style="color:#ff79c6">:=</span> cl.<span style="color:#50fa7b">GetPidsByProcessName</span>(<span style="color:#f1fa8c">&#34;chaos_os&#34;</span>, ctx)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>pids = <span style="color:#8be9fd;font-style:italic">append</span>(ps, pids<span style="color:#ff79c6">...</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span><span style="color:#ff79c6">return</span> cl.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;kill&#34;</span>, fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">`-9 %s`</span>, strings.<span style="color:#50fa7b">Join</span>(pids, <span style="color:#f1fa8c">&#34; &#34;</span>)))
+</span></span></code></pre></div><h2 id="实践遇到的问题">实践遇到的问题<a class="anchorjs-link" href="#%e5%ae%9e%e8%b7%b5%e9%81%87%e5%88%b0%e7%9a%84%e9%97%ae%e9%a2%98"></a></h2><p>当在 K8S 物理机中注入 CPU 满载(使用率 100%)故障时，有可能会出现 CPU 使用率不能达到 100%。</p>
+<p>如果出现这种情况，需要观察下是不是物理中的容器的 <strong>CPU 优先级</strong>设置的比较高，当一个容器的 CPU 优先级较高（即设置了较大的 <strong>cpu.shares</strong> 或其他相应的参数），容器内的进程将会优先获得 CPU 时间片。这会导致容器内的进程在竞争 CPU 资源时优先运行，而物理机上其他进程则可能因为 CPU 时间片被抢占而获得较少的 CPU 时间，从而影响了其他进程的 CPU 使用。</p>
+<h1 id="总结">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93"></a></h1><p>ChaosBlade 是一个用于模拟故障的工具，旨在帮助开发人员和管理员了解系统性能，增强系统稳定性，并提高应对故障的能力。</p>
+<p>本文介绍了 ChaosBlade 模拟 CPU 负载升高的使用方式及其底层实现，通过这篇文章，了解到如何使用 ChaosBlade 工具进行 CPU 负载模拟，从而更好地了解系统性能，优化系统稳定性，并提高处理故障的能力。同时，还了解到在容器环境下获取正确的 CPU 使用率和核心数的方法，以及对特定核心进行负载注入的实现原理。</p>
+<h2 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h2><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/chaosblade-tool/" data-toggle="tooltip" data-placement="top" title="混沌工程之 ChaosBlade 故障注入百宝箱">
+              Previous<br>
+              <span>混沌工程之 ChaosBlade 故障注入百宝箱</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
