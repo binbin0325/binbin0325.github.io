@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用"/>
+<meta name="twitter:description" content="强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用."/>
+
+  <meta property="og:title" content="强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用" />
+<meta property="og:description" content="强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/chaosblade-mem/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-09-04T09:10:54+08:00" />
+<meta property="article:modified_time" content="2023-09-04T09:10:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-cpu/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-tool/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-hotspot/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/sentinel-data/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/chaos/" title="chaos">chaos</a>
+            
+            <a class="tag" href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/" title="混沌工程">混沌工程</a>
+            
+            <a class="tag" href="/tags/chaosblade/" title="chaosblade">chaosblade</a>
+            
+            <a class="tag" href="/tags/mem/" title="mem">mem</a>
+            
+          </div>
+          <h1>强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Mon, Sep 4, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="引言">引言<a class="anchorjs-link" href="#%e5%bc%95%e8%a8%80"></a></h1><p>在之前的文章中，我们详细介绍了 ChaosBlade 中 <a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;amp;mid=2247484082&amp;amp;idx=1&amp;amp;sn=db65e3cfc62bcb3e6170b3f16005b848&amp;amp;chksm=cedb04fbf9ac8ded7e30fe719ca841a2eeae713c0a81c6d9746361ef9e8a7f4c88791fd6b39d&amp;token=842742047&amp;lang=zh_CN#rd" target="_blank">CPU 故障的实现原理</a>。本文将重点介绍模拟磁盘故障的<strong>实际操作与具体实现</strong>，包括 Linux 命令（如 <strong>dd 和 fallocate</strong>）的使用与说明，以及当前 ChaosBlade 在磁盘故障模拟方面的<strong>不足之处和优化改进</strong>。</p>
+<p>目前 ChaosBlade 已支持的基础资源类故障场景如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/62/62c02efa3322b56a325635829651a9fd.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h1 id="介绍">介绍<a class="anchorjs-link" href="#%e4%bb%8b%e7%bb%8d"></a></h1><p>磁盘对于服务的稳定性有着至关重要的作用，当磁盘故障时可能会导致服务响应时长增加、任务处理速度变慢甚至系统假死等问题。例如</p>
+<ol>
+<li>Web 服务器：</li>
+</ol>
+<ul>
+<li>静态内容受影响：如果磁盘上存储了网站的静态文件（如 HTML、CSS、JavaScript 文件），磁盘故障可能导致这些文件无法访问，使网站的外观和功能受损。</li>
+</ul>
+<ol start="2">
+<li>业务服务：</li>
+</ol>
+<ul>
+<li>日志记录失败：磁盘故障可能导致业务无法正常记录日志，同步日志打印情况下可能会导致业务进程hang住，异步日志打印可能导致线程池打满</li>
+</ul>
+<ol start="3">
+<li>数据库服务：</li>
+</ol>
+<ul>
+<li>
+<p>数据不一致：磁盘故障可能导致数据库中的数据写入不完整，造成数据不一致，影响数据的完整性和准确性。</p>
+</li>
+<li>
+<p>读写延迟增加：磁盘故障可能导致数据库读写操作的延迟增加，降低系统的响应速度。</p>
+</li>
+</ul>
+<ol start="4">
+<li>文件存储服务：</li>
+</ol>
+<ul>
+<li>
+<p>文件丢失：磁盘故障可能导致文件丢失，如果没有备份，这些文件可能无法恢复，影响用户数据和体验。</p>
+</li>
+<li>
+<p>文件上传受阻：用户无法成功将文件上传到服务上，影响服务的核心功能。</p>
+</li>
+</ul>
+<ol start="5">
+<li>消息队列服务：</li>
+</ol>
+<ul>
+<li>
+<p>消息丢失：磁盘故障可能导致消息队列中的消息丢失，影响异步任务的处理和系统解耦。</p>
+</li>
+<li>
+<p>消息处理失败增加：由于消息队列中消息丢失，消息处理失败的情况可能增加，导致系统无法正常工作。</p>
+</li>
+</ul>
+<p>为了更好地了解系统性能，增强系统的稳定性，以及提高应对故障的能力，开发人员和系统管理员需要一种有效的方式来模拟磁盘故障来验证磁盘故障后的预案止损手段/程序的自愈能力。而在这里我们引入 ChaosBlade，用于模拟故障并帮助用户实现磁盘故障。</p>
+<p>下面是一些磁盘故障注入的验证场景：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/a5/a50ca299c05c84bb1faab24cfe7616ba.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>下面将正式介绍 ChaosBlade 项目中模拟磁盘故障的使用方式和底层实现，项目地址： <a href="https://github.com/chaosblade-io/chaosblade-exec-os" target="_blank">https://github.com/chaosblade-io/chaosblade-exec-os</a></p>
+<h1 id="chaosblade-磁盘故障模拟">ChaosBlade 磁盘故障模拟<a class="anchorjs-link" href="#chaosblade-%e7%a3%81%e7%9b%98%e6%95%85%e9%9a%9c%e6%a8%a1%e6%8b%9f"></a></h1><h2 id="功能介绍">功能介绍<a class="anchorjs-link" href="#%e5%8a%9f%e8%83%bd%e4%bb%8b%e7%bb%8d"></a></h2><p>目前 ChaosBlade 支持的磁盘故障场景，包括</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/fa/fab76fa30bc4944e5e7efdc1c55bfa86.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="安装与使用">安装与使用<a class="anchorjs-link" href="#%e5%ae%89%e8%a3%85%e4%b8%8e%e4%bd%bf%e7%94%a8"></a></h2><p>首先，您可以从 <a href="https://github.com/chaosblade-io/chaosblade-exec-os" target="_blank">ChaosBlade GitHub 仓库</a> 下载 ChaosBlade Tool 工具包，并将其解压到目标机器上，然后执行相应的命令来模拟磁盘故障。</p>
+<h3 id="磁盘-io-负载故障">磁盘 IO 负载故障<a class="anchorjs-link" href="#%e7%a3%81%e7%9b%98-io-%e8%b4%9f%e8%bd%bd%e6%95%85%e9%9a%9c"></a></h3><p><strong>命令格式：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./blade create disk burn <span style="color:#ff79c6">[</span>flags<span style="color:#ff79c6">]</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>参数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>--path string      指定提升磁盘 io 的目录，会作用于其所在的磁盘上，默认值是 /
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>--read             触发提升磁盘读 IO 负载，会创建 600M 的文件用于读，销毁实验会自动删除
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>--size string      块大小, 单位是 M, 默认值是 10，一般不需要修改，除非想更大的提高 io 负载
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>--write            触发提升磁盘写 IO 负载，会根据块大小的值来写入一个文件，比如块大小是 10，则固定的块的数量是 100，则会创建 1000M 的文件，销毁实验会自动删除
+</span></span></code></pre></div><p><strong>使用案例：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4"># 在执行实验之前可先观察磁盘 io 读写负载</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>iostat -x -t <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#6272a4"># 上述命令会 2 秒刷新一次读写负载数据，截取结果如下</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>vda               0.00     2.50    0.00    2.00     0.00    18.00    18.00     0.00    1.25    0.00    1.25   1.25   0.25
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#6272a4"># 主要观察 rkB/s、wkB/s、%util 数据。执行磁盘读 IO 负载高场景</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>blade create disk burn --read --path /home
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span><span style="color:#6272a4"># 执行 iostat 命令可以看到读负载增大，使用率达 99.9%。执行 blade destroy UID(上述执行实验返回的 result 值)可销毁实验。</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>vda               0.00     3.00  223.00    2.00 108512.00    20.00   964.73    11.45   50.82   51.19   10.00   4.44  99.90
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span><span style="color:#6272a4"># 销毁上述实验后，执行磁盘写 IO 负载高场景</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>blade create disk burn --write --path /home
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span><span style="color:#6272a4"># 执行 iostat 命令可以看到写负载增大，使用率达 90.10%。</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>vda               0.00    43.00    0.00  260.00     0.00 111572.00   858.25    15.36   59.71    0.00   59.71   3.47  90.10
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span><span style="color:#6272a4"># 可同时执行读写 IO 负载场景，不指定 path，默认值是 /</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>blade create disk burn --read --write
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span><span style="color:#6272a4"># 通过 iostat 命令可以看到，整个磁盘的 io 使用率达到了 100%</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35</span><span>Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36</span><span>vda               0.00    36.00  229.50  252.50 108512.00 107750.00   897.35    30.09   62.70   53.49   71.07   2.07 100.00
+</span></span></code></pre></div><h3 id="磁盘填充故障">磁盘填充故障<a class="anchorjs-link" href="#%e7%a3%81%e7%9b%98%e5%a1%ab%e5%85%85%e6%95%85%e9%9a%9c"></a></h3><p><strong>命令格式：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./blade create disk fill <span style="color:#ff79c6">[</span>flags<span style="color:#ff79c6">]</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>s
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>参数
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>--path string      需要填充的目录，默认值是 /
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>--size string      需要填充的文件大小，单位是 M，取值是整数，例如 --size <span style="color:#bd93f9">1024</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>--reserve string   保留磁盘大小，单位是 MB。取值是不包含单位的正整数，例如 --reserve 1024。如果 size、percent、reserve 参数都存在，优先级是 percent &gt; reserve &gt; size
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>--percent string   指定磁盘使用率，取值是不带%号的正整数，例如 --percent <span style="color:#bd93f9">80</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">9</span><span>--retain-handle    是否保留填充
+</span></span></code></pre></div><p><strong>使用案例：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4"># 执行实验之前，先看下 /home 所在磁盘的大小</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>df -h /home
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>/dev/vda1        40G  4.0G   34G  11% /
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span><span style="color:#6272a4"># 执行磁盘填充，填充 40G，即达到磁盘满的效果（可用 34G）</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>blade create disk fill --path /home --size <span style="color:#bd93f9">40000</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span><span style="color:#6272a4"># 返回结果</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;code&#34;</span>:200,<span style="color:#f1fa8c">&#34;success&#34;</span>:true,<span style="color:#f1fa8c">&#34;result&#34;</span>:<span style="color:#f1fa8c">&#34;7a3d53b0e91680d9&#34;</span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span><span style="color:#6272a4"># 查看磁盘大小</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>df -h /home
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>/dev/vda1        40G   40G     <span style="color:#bd93f9">0</span> 100% /
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span><span style="color:#6272a4"># 销毁实验</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26</span><span>blade destroy 7a3d53b0e91680d9
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29</span><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;code&#34;</span>:200,<span style="color:#f1fa8c">&#34;success&#34;</span>:true,<span style="color:#f1fa8c">&#34;result&#34;</span>:<span style="color:#f1fa8c">&#34;command: disk fill --debug false --help false --path /home --size 40000&#34;</span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32</span><span><span style="color:#6272a4"># 查看磁盘大小</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33</span><span>df -h /home
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36</span><span>Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37</span><span>/dev/vda1        40G  4.0G   34G  11% /
+</span></span></code></pre></div><h2 id="核心源码解析">核心源码解析<a class="anchorjs-link" href="#%e6%a0%b8%e5%bf%83%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90"></a></h2><h3 id="磁盘-io-负载故障-1">磁盘 IO 负载故障<a class="anchorjs-link" href="#%e7%a3%81%e7%9b%98-io-%e8%b4%9f%e8%bd%bd%e6%95%85%e9%9a%9c-1"></a></h3><p>磁盘的 IO 负载主要分为读 IO 和写 IO 两种，如果让你来实现有什么好的方案吗？</p>
+<p>例如读 IO 负载，我们可以写一个程序，在程序中不断的读取某一个文件来达到提升 IO 读负载的效果。不过这里面的细节还是挺多的，例如要考虑每次读取的缓冲区大小，太大可能会导致程序内存溢出，太小可能 IO 负载还提升不上去。如果开启多个线程读取，可能还会导致 CPU 使用率升高等等问题。</p>
+<p>接下来，让我们来看一下在chaosblade中是如何实现磁盘IO负载的。在此之前，我们先来了解一下Linux的dd命令，因为在chaosblade的磁盘IO负载故障模拟中，dd命令至关重要。</p>
+<h4 id="linux-dd-命令">linux dd 命令<a class="anchorjs-link" href="#linux-dd-%e5%91%bd%e4%bb%a4"></a></h4><p>dd 是一个常用的 Linux 命令，用于在不同设备、文件和数据流之间进行数据复制和转换。它的名称 &ldquo;dd&rdquo; 代表 &ldquo;数据定义&rdquo;（data definition），尽管现在更多地被解释为 &ldquo;复制并转换&rdquo;（copy and convert）。dd 命令强大而灵活，但同时也需要谨慎使用，因为它可以直接操作底层的数据</p>
+<p>以下是 dd 命令的基本用法和一些常见的选项：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>input_file <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>output_file <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>block_size <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span>num_blocks <span style="color:#ff79c6">[</span>options<span style="color:#ff79c6">]</span> 
+</span></span></code></pre></div><ul>
+<li>
+<p><code>if</code>（input file）：指定输入文件或数据源。</p>
+</li>
+<li>
+<p><code>of</code>（output file）：指定输出文件或数据目标。</p>
+</li>
+<li>
+<p><code>bs</code>（block size）：指定每次复制的数据块大小。默认单位是字节。</p>
+</li>
+<li>
+<p><code>count</code>：指定要复制的数据块数量。</p>
+</li>
+</ul>
+<p>常见的选项包括：</p>
+<ul>
+<li>
+<p><code>iflag</code>：用于指定输入选项</p>
+</li>
+<li>
+<p><code>direct</code>：执行直接 IO，绕过文件系统缓存。</p>
+</li>
+<li>
+<p><code>dsync</code>：在每次读取后进行 <code>fsync</code>，确保数据写入磁盘。</p>
+</li>
+<li>
+<p><code>fullblock</code>：读取操作将始终读取完整的块，而不会读取部分块。</p>
+</li>
+<li>
+<p><code>nonblock</code>：使用非阻塞 IO。</p>
+</li>
+<li>
+<p><code>noatime</code>：不更新文件的访问时间。</p>
+</li>
+<li>
+<p><code>oflag</code>：用于指定输出选项</p>
+</li>
+<li>
+<p><code>direct</code>：执行直接 IO，绕过文件系统缓存。</p>
+</li>
+<li>
+<p><code>dsync</code>：在每次写入后进行 <code>fsync</code>，确保数据写入磁盘。</p>
+</li>
+<li>
+<p><code>fullblock</code>：写入操作将始终写入完整的块，而不会写入部分块。</p>
+</li>
+<li>
+<p><code>nonblock</code>：使用非阻塞 IO。</p>
+</li>
+<li>
+<p><code>nocreat</code>：如果输出文件不存在，则不创建该文件。</p>
+</li>
+<li>
+<p><code>excl</code>：当创建输出文件时，如果文件已存在，则返回错误。</p>
+</li>
+<li>
+<p><code>status</code>：控制进度信息的显示频率。</p>
+</li>
+<li>
+<p><code>seek</code>：指定输出文件的起始偏移量。</p>
+</li>
+<li>
+<p><code>skip</code>：跳过输入文件的起始偏移量。</p>
+</li>
+</ul>
+<p>以下是一些 <code>dd</code> 命令的示例：</p>
+<p>从一个文件复制到另一个文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>input.txt <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>output.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1024</span> 
+</span></span></code></pre></div><p>创建一个固定大小的空文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>emptyfile <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">100</span> 
+</span></span></code></pre></div><p>将一个硬盘分区备份到一个文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/sdb1 <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>backup.img <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>4M 
+</span></span></code></pre></div><p>从一个设备读取数据并写入另一个设备：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/sda <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>/dev/sdb <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">4096</span> 
+</span></span></code></pre></div><p>生成随机数据并写入文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/urandom <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>randomdata.bin <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10</span>
+</span></span></code></pre></div><h4 id="io-读负载源码解析">IO 读负载源码解析<a class="anchorjs-link" href="#io-%e8%af%bb%e8%b4%9f%e8%bd%bd%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90"></a></h4><p>下面是模拟 IO 读负载核心代码，通过这段代码可以看到如何利用 dd 命令提升 IO 读负载：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4">// read burn
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span><span style="color:#6272a4"></span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">burnRead</span>(ctx context.Context, directory, size <span style="color:#8be9fd">string</span>, cl spec.Channel) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>  <span style="color:#6272a4">// create a 600M file under the directory
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span><span style="color:#6272a4"></span>  tmpFileForRead <span style="color:#ff79c6">:=</span> <span style="color:#f1fa8c">&#34;/chaos_burnio.read&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>  <span style="color:#6272a4">// 利用 dd 创建文件的命令,
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span><span style="color:#6272a4"></span>  ddCreateArg <span style="color:#ff79c6">:=</span> <span style="color:#f1fa8c">&#34;if=/dev/zero of=%s bs=%dM count=%d oflag=dsync&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>  <span style="color:#6272a4">// 利用 dd 读取文件的命令
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span><span style="color:#6272a4"></span>  ddRunningReadArg <span style="color:#ff79c6">:=</span> <span style="color:#f1fa8c">&#34;if=%s of=/dev/null bs=%sM count=%d iflag=dsync,direct,fullblock&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>  <span style="color:#6272a4">// 创建文件 chaos_burnio.read 大小=600M
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#6272a4"></span>  createArgs <span style="color:#ff79c6">:=</span> fmt.<span style="color:#50fa7b">Sprintf</span>(ddCreateArg, tmpFileForRead, <span style="color:#bd93f9">6</span>, count)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>  response <span style="color:#ff79c6">:=</span> localChannel.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;dd&#34;</span>, createArgs)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  <span style="color:#ff79c6">if</span> !response.Success {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>   log.<span style="color:#50fa7b">Errorf</span>(ctx, <span style="color:#f1fa8c">&#34;disk burn read, run dd err: %s&#34;</span>, response.Err)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>  <span style="color:#ff79c6">for</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>   <span style="color:#6272a4">// 不断利用 dd 读取刚刚创建的文件，达到提升读 IO 负载的效果
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span><span style="color:#6272a4"></span>   args <span style="color:#ff79c6">:=</span> fmt.<span style="color:#50fa7b">Sprintf</span>(ddRunningReadArg, tmpFileForRead, size, count)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   <span style="color:#6272a4">//run with local channel
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span><span style="color:#6272a4"></span>   response <span style="color:#ff79c6">:=</span> localChannel.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;dd&#34;</span>, args)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>   <span style="color:#ff79c6">if</span> !response.Success {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>    log.<span style="color:#50fa7b">Errorf</span>(ctx, <span style="color:#f1fa8c">&#34;disk burn read, run dd err: %s&#34;</span>, response.Err)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>    <span style="color:#ff79c6">break</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25</span><span>}
+</span></span></code></pre></div><p><strong>首先根据参数传入的路径，创建一个 readFile 文件，文件名是固定的 chaos_burnio.read，然后利用 DD 命令创建 这个 600M 的 readFile 文件</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>chaos_burnio.read <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>6M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">100</span> <span style="color:#8be9fd;font-style:italic">oflag</span><span style="color:#ff79c6">=</span>dsync
+</span></span></code></pre></div><ul>
+<li>
+<p><strong>dd：用指定大小的块拷贝一个文件，并在拷贝的同时进行指定的转换</strong></p>
+</li>
+<li>
+<p><strong>if: 文件输入源， /dev/zero 则是 linux 提供的虚拟设备，可以无限输出空字符 0x00</strong></p>
+</li>
+<li>
+<p><strong>of: 文件输出源 意思就是将/dev/zero 的空字符 0x00 写入到 of 的 chaos_burnio.read 文件中</strong></p>
+</li>
+<li>
+<p><strong>bs:同时输入/输出的大小 为 6M</strong></p>
+</li>
+<li>
+<p><strong>count: 拷贝 100 个块，每个块的大小为 6M</strong></p>
+</li>
+<li>
+<p><strong>oflag: dsync 代表每一次写入磁盘成功后，才进行下一次写</strong></p>
+</li>
+</ul>
+<p><strong>当创建文件完成后，则开始读取，读取的方式则是开启 for 循环 不断的执行 dd 命令</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>%s <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>/dev/null <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>%sM <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span>%d <span style="color:#8be9fd;font-style:italic">iflag</span><span style="color:#ff79c6">=</span>dsync,direct,fullblock
+</span></span></code></pre></div><p><strong>从 if 指定的文件中读取(其实就是 chaos_burnio.read 上一步创建的 600M 文件), 输出到/dev/null 中。/dev/null 也是 liunx 一个虚拟设备，类似于无底洞，输入到/dev/null 的内容将直接被丢弃，没有任何痕迹。iflag:指定读的方式 为 dsync,direct,fullblock。dsync 代表读写采用同步 io, direct 读写数据使用直接 io（不使用缓冲 buffer), fullblock 代表读取完整块，通过 dd 不断的读取来提升磁盘的读负载</strong></p>
+<h4 id="io-写负载源码解析">IO 写负载源码解析<a class="anchorjs-link" href="#io-%e5%86%99%e8%b4%9f%e8%bd%bd%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90"></a></h4><p>写负载相对读负载更简单一些，写负载就是利用 dd 不断的写入即可</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4">// write burn
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span><span style="color:#6272a4"></span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">burnWrite</span>(ctx context.Context, directory, size <span style="color:#8be9fd">string</span>, cl spec.Channel) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>  tmpFileForWrite <span style="color:#ff79c6">:=</span> <span style="color:#f1fa8c">&#34;/chaos_burnio.write&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>  ddRunningWriteArg <span style="color:#ff79c6">:=</span> <span style="color:#f1fa8c">&#34;if=/dev/zero of=%s bs=%sM count=%d oflag=dsync&#34;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>  <span style="color:#ff79c6">for</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   args <span style="color:#ff79c6">:=</span> fmt.<span style="color:#50fa7b">Sprintf</span>(ddRunningWriteArg, tmpFileForWrite, size, count)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>   response <span style="color:#ff79c6">:=</span> localChannel.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;dd&#34;</span>, args)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   <span style="color:#ff79c6">if</span> !response.Success {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>    log.<span style="color:#50fa7b">Errorf</span>(ctx, <span style="color:#f1fa8c">&#34;disk burn write, run dd err: %s&#34;</span>, response.Err)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>    <span style="color:#ff79c6">break</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>}
+</span></span></code></pre></div><p><strong>磁盘写负载就是利用 dd 不断的从/dev/zero 中读取空字符 0x00，写入到文件中。由此来提升磁盘的写负载。</strong></p>
+<h4 id="停止读写负载">停止读写负载<a class="anchorjs-link" href="#%e5%81%9c%e6%ad%a2%e8%af%bb%e5%86%99%e8%b4%9f%e8%bd%bd"></a></h4><p>停止相对简单，kill 掉故障注入的进程，这里和模拟 CPU 故障停止是一样的，但是额外需要将对应的文件 chaos_burnio.write/chaos_burnio.read 删除，避免占用磁盘空间。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> (be <span style="color:#ff79c6">*</span>BurnIOExecutor) <span style="color:#50fa7b">stop</span>(ctx context.Context, read, write <span style="color:#8be9fd">bool</span>, directory <span style="color:#8be9fd">string</span>) <span style="color:#ff79c6">*</span>spec.Response {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>  <span style="color:#ff79c6">if</span> read {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>    localChannel.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;rm&#34;</span>, fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">&#34;-rf %s*&#34;</span>, path.<span style="color:#50fa7b">Join</span>(directory, readFile)))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>  <span style="color:#ff79c6">if</span> write {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>   localChannel.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;rm&#34;</span>, fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">&#34;-rf %s*&#34;</span>, path.<span style="color:#50fa7b">Join</span>(directory, writeFile))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>  }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>  <span style="color:#ff79c6">return</span> exec.<span style="color:#50fa7b">Destroy</span>(ctx, be.channel, <span style="color:#f1fa8c">&#34;disk burn&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">9</span><span>}
+</span></span></code></pre></div><h3 id="磁盘填充故障-1">磁盘填充故障<a class="anchorjs-link" href="#%e7%a3%81%e7%9b%98%e5%a1%ab%e5%85%85%e6%95%85%e9%9a%9c-1"></a></h3><p>上面介绍了磁盘 IO 负载的实现，主要是通过 dd 命令进行读取和写入，那么磁盘填充故障是不是也可以直接利用 dd 命令实现呢？</p>
+<p>答案：不可以，原因是因为 dd 命令的写入是会真实的将数据写入到文件中，这就决定了 dd 的写入速度不够快，在磁盘填充故障场景中可能会有打满磁盘的需求，假设一个磁盘空间比较大，那么利用 dd 执行写入故障的耗时就会比较长，用户体验不好。</p>
+<p>在 chaosblade 中是利用 <strong>fallocate</strong> 命令解决这个问题的，下面先了解下 <strong>fallocate</strong> 命令</p>
+<h4 id="linux-fallocate-命令">linux fallocate 命令<a class="anchorjs-link" href="#linux-fallocate-%e5%91%bd%e4%bb%a4"></a></h4><p><code>fallocate</code> 命令是一个用于在 Linux 操作系统中预分配文件空间的实用工具。它允许您在文件系统中为文件预先分配一定大小的空间，而无需实际写入数据。这种预分配空间的操作对于创建大文件、测试文件系统性能以及管理磁盘空间非常有用。</p>
+<p>以下是 <code>fallocate</code> 命令的基本语法：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>fallocate <span style="color:#ff79c6">[</span>OPTIONS<span style="color:#ff79c6">]</span> FILENAME
+</span></span></code></pre></div><p>常用的选项包括：</p>
+<ul>
+<li>
+<p><code>-l, --length</code>: 指定要预分配的文件空间的大小。可以使用后缀（如 K、M、G、T）来指定单位，例如 <code>-l 1G</code> 表示分配 1GB 的空间。</p>
+</li>
+<li>
+<p><code>-o, --offset</code>: 指定在文件中的偏移量，从该位置开始进行预分配。</p>
+</li>
+<li>
+<p><code>--dig-holes</code>: 尝试创建稀疏文件，仅分配文件空间的元数据而不分配数据块。在支持稀疏文件的文件系统上有效。</p>
+</li>
+<li>
+<p><code>--punch-hole</code>: 在文件中&quot;打孔&quot;，释放指定范围内的数据块，从而释放空间。在支持 Punch Hole 操作的文件系统上有效。</p>
+</li>
+</ul>
+<p>示例用法：</p>
+<p>创建一个 1GB 的空文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>fallocate -l 1G filename 
+</span></span></code></pre></div><p>创建一个 500MB 的空文件，从文件的第 1GB 处开始：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>fallocate -o 1G -l 500M filename 
+</span></span></code></pre></div><p>创建一个稀疏文件，只分配元数据而不实际分配数据块：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>fallocate --dig-holes filename 
+</span></span></code></pre></div><p>在文件中&quot;打孔&quot;，释放指定范围内的数据块：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>fallocate --punch-hole -o 1G -l 500M filename 
+</span></span></code></pre></div><h4 id="填充源码解析">填充源码解析<a class="anchorjs-link" href="#%e5%a1%ab%e5%85%85%e6%ba%90%e7%a0%81%e8%a7%a3%e6%9e%90"></a></h4><p>在 chaosblade 中就是利用 fallocate 实现的磁盘填充，因为 fallocate 是在文件系统中预分配空间，而不涉及实际的数据传输。它可以直接在文件系统中分配元数据和数据块，速度比 dd 命令创建文件更快。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">fillDiskByFallocate</span>(ctx context.Context, size <span style="color:#8be9fd">string</span>, dataFile <span style="color:#8be9fd">string</span>, cl spec.Channel) <span style="color:#ff79c6">*</span>spec.Response {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>  response <span style="color:#ff79c6">:=</span> cl.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;fallocate&#34;</span>, fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">`-l %sM %s`</span>, size, dataFile))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>}
+</span></span></code></pre></div><p>不过 chaosblade 为了防止 fallocate 执行失败（不支持 fallocate 的文件系统等原因导致的异常），会在 fallocate 执行失败后利用 dd 尝试填充</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#6272a4">// Some normal filesystems (ext4, xfs, btrfs and ocfs2) tack quick works
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span><span style="color:#6272a4"></span><span style="color:#ff79c6">if</span> cl.<span style="color:#50fa7b">IsCommandAvailable</span>(ctx, <span style="color:#f1fa8c">&#34;fallocate&#34;</span>) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>  response = <span style="color:#50fa7b">fillDiskByFallocate</span>(ctx, size, dataFile, cl)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span><span style="color:#ff79c6">if</span> response <span style="color:#ff79c6">==</span> <span style="color:#ff79c6">nil</span> <span style="color:#ff79c6">||</span> !response.Success {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>  <span style="color:#6272a4">// If execute fallocate command failed, use dd command to retry.
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#6272a4"></span>  response = <span style="color:#50fa7b">fillDiskByDD</span>(ctx, dataFile, directory, size, cl)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span><span style="color:#6272a4">// fillDiskByDD 利用 dd 重试
+</span></span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span><span style="color:#6272a4"></span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">fillDiskByDD</span>(ctx context.Context, dataFile <span style="color:#8be9fd">string</span>, directory <span style="color:#8be9fd">string</span>, size <span style="color:#8be9fd">string</span>, cl spec.Channel) <span style="color:#ff79c6">*</span>spec.Response {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>  <span style="color:#ff79c6">return</span> cl.<span style="color:#50fa7b">Run</span>(ctx, <span style="color:#f1fa8c">&#34;nohup&#34;</span>,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>   fmt.<span style="color:#50fa7b">Sprintf</span>(<span style="color:#f1fa8c">`dd if=/dev/zero of=%s bs=1M count=%s iflag=fullblock &gt;/dev/null 2&gt;&amp;1 &amp;`</span>, dataFile, size))
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>}
+</span></span></code></pre></div><h4 id="填充大小计算">填充大小计算<a class="anchorjs-link" href="#%e5%a1%ab%e5%85%85%e5%a4%a7%e5%b0%8f%e8%ae%a1%e7%ae%97"></a></h4><p>上面介绍的是利用 <strong>fallocate</strong> 填充磁盘，这里还有一个关键点当用户指定比例填充时，<strong>填充磁盘创建的文件大小是如何计算</strong>？</p>
+<p>这里需要利用<strong>系统调用 syscall.Statfs</strong> 获取要填充的目录所属的文件系统的统计信息，从而计算出当前文件系统已使用的比例与要填充的比例进行对比，如果大于则直接返回，如果小于则通过比例差值*总空间字节大小，最终获取到要填充的磁盘大小。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>// 系统调用，获取到文件系统的统计信息
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>var stat *syscall.Statfs_t
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>err :<span style="color:#ff79c6">=</span> syscall.Statfs<span style="color:#ff79c6">(</span>directory, stat<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>// 磁盘总空间
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>allBytes :<span style="color:#ff79c6">=</span> stat.Blocks * uint64<span style="color:#ff79c6">(</span>stat.Bsize<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>// 可用字节
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>availableBytes :<span style="color:#ff79c6">=</span> stat.Bavail * uint64<span style="color:#ff79c6">(</span>stat.Bsize<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>// 已用字节
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>usedBytes :<span style="color:#ff79c6">=</span> allBytes - availableBytes
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span><span style="color:#ff79c6">if</span> percent !<span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34;&#34;</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>  p, _ :<span style="color:#ff79c6">=</span> strconv.Atoi<span style="color:#ff79c6">(</span>percent<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>  // 已用的比例
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>  usedPercentage, _ :<span style="color:#ff79c6">=</span> strconv.ParseFloat<span style="color:#ff79c6">(</span>fmt.Sprintf<span style="color:#ff79c6">(</span><span style="color:#f1fa8c">&#34;%.2f&#34;</span>, float64<span style="color:#ff79c6">(</span>usedBytes<span style="color:#ff79c6">)</span>/float64<span style="color:#ff79c6">(</span>allBytes<span style="color:#ff79c6">))</span>, 64<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span>  // 预期填充的比例
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>  expectedPercentage, _ :<span style="color:#ff79c6">=</span> strconv.ParseFloat<span style="color:#ff79c6">(</span>fmt.Sprintf<span style="color:#ff79c6">(</span><span style="color:#f1fa8c">&#34;%.2f&#34;</span>, float64<span style="color:#ff79c6">(</span>p<span style="color:#ff79c6">)</span>/100.0<span style="color:#ff79c6">)</span>, 64<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>  <span style="color:#ff79c6">if</span> usedPercentage &gt;<span style="color:#ff79c6">=</span> expectedPercentage <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>   <span style="color:#ff79c6">return</span> <span style="color:#f1fa8c">&#34;&#34;</span>, fmt.Errorf<span style="color:#ff79c6">(</span><span style="color:#f1fa8c">&#34;the disk has been used %.2f, large than expected&#34;</span>, usedPercentage<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>  <span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>  // 待填充的比例
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20</span><span>  remainderPercentage :<span style="color:#ff79c6">=</span> expectedPercentage - usedPercentage
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21</span><span>  log.Debugf<span style="color:#ff79c6">(</span>ctx, <span style="color:#f1fa8c">&#34;remainderPercentage: %f&#34;</span>, remainderPercentage<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22</span><span>  // 待填充大小,单位 M
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23</span><span>  expectSize :<span style="color:#ff79c6">=</span> math.Floor<span style="color:#ff79c6">(</span>remainderPercentage * float64<span style="color:#ff79c6">(</span>allBytes<span style="color:#ff79c6">)</span> / <span style="color:#ff79c6">(</span>1024.0 * 1024.0<span style="color:#ff79c6">))</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24</span><span>  <span style="color:#ff79c6">return</span> fmt.Sprintf<span style="color:#ff79c6">(</span><span style="color:#f1fa8c">&#34;%.f&#34;</span>, expectSize<span style="color:#ff79c6">)</span>, nil
+</span></span></code></pre></div><h3 id="回滚">回滚<a class="anchorjs-link" href="#%e5%9b%9e%e6%bb%9a"></a></h3><p>回滚和磁盘 IO 负载基本一样，也是 kill 填充的进程，并删除填充的对应文件。</p>
+<h2 id="实践遇到的问题">实践遇到的问题<a class="anchorjs-link" href="#%e5%ae%9e%e8%b7%b5%e9%81%87%e5%88%b0%e7%9a%84%e9%97%ae%e9%a2%98"></a></h2><p>在磁盘填充故障场景中注入故障指定填充比例为 100%时，注入成功后到目标机器上查看磁盘使用情况，偶尔会发现磁盘并没有被打满，总是有一小部分空间未被填充。</p>
+<p>这个问题的出现可能是因为文件系统碎片化导致的，如果文件系统中有过多的碎片，就会导致 fallocate 创建数据块时失败，出现磁盘没有填充满的情况（默认情况下在 ext4 和 XFS 文件系统中，块大小通常是 4KB）</p>
+<p>解决思路：可以利用 fallocate 与 dd 进行互补，当使用 fallocate 注入后定时检查磁盘空间的占用情况是否达到预期值，如果没有的话利用 dd 继续填充，为了加快 dd 的填充速度以及避免填充失败，开启多线程并根据距离预期值的大小按照不同的粒度填充，例如距离预期值还差 10M，那么每次填充 1M。如果距离预期值还差 10K,那么每次只填充 1K。</p>
+<h1 id="总结">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93"></a></h1><p>磁盘故障常见且影响大，掌握模拟方法助于验证系统稳定性和应急处理。通过 ChaosBlade 项目深入学习磁盘故障模拟的实现，我们可以掌握如何使用 dd 和 fallocate 等工具，进一步优化系统的故障恢复能力。此外，通过源码的解析和理解，还可以为开发人员提供编写高效故障模拟工具的指导，并且为其他类似工具的开发奠定基础。</p>
+<h2 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h2><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/chaosblade-cpu/" data-toggle="tooltip" data-placement="top" title="揭秘ChaosBlade CPU故障：实现CPU故障的黑科技">
+              Previous<br>
+              <span>揭秘ChaosBlade CPU故障：实现CPU故障的黑科技</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/cpu/">cpu</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/mem/">mem</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
