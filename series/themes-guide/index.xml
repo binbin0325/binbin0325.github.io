@@ -6,7 +6,16 @@
     <description>Recent content in Themes Guide on binbin0325</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 04 Sep 2023 09:10:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/series/themes-guide/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 07 Sep 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/series/themes-guide/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>透过JVM-SANDBOX源码,了解字节码增强技术</title>
+      <link>https://binbin0325.github.io/posts/jvm-sandbox/</link>
+      <pubDate>Thu, 07 Sep 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/jvm-sandbox/</guid>
+      <description>介绍JVM 沙箱容器是一种 JVM 的非侵入式运行期 AOP 解决方案。通过 JVM-SANDBOX 可以在不重启，不侵入目标 jvm 的前提下对目标方法进行代码增强。 无侵入，类隔离，可插拔</description>
+    </item>
+    
     <item>
       <title>强化服务韧性：ChaosBlade磁盘故障模拟的原理与应用</title>
       <link>https://binbin0325.github.io/posts/chaosblade-mem/</link>

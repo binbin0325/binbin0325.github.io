@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>java on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/java/</link>
+    <description>Recent content in java on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 07 Sep 2023 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>透过JVM-SANDBOX源码,了解字节码增强技术</title>
+      <link>https://binbin0325.github.io/posts/jvm-sandbox/</link>
+      <pubDate>Thu, 07 Sep 2023 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/jvm-sandbox/</guid>
+      <description>介绍JVM 沙箱容器是一种 JVM 的非侵入式运行期 AOP 解决方案。通过 JVM-SANDBOX 可以在不重启，不侵入目标 jvm 的前提下对目标方法进行代码增强。 无侵入，类隔离，可插拔</description>
+    </item>
+    
+  </channel>
+</rss>
