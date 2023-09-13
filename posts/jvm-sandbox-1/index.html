@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末"/>
+<meta name="twitter:description" content="JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末."/>
+
+  <meta property="og:title" content="JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末" />
+<meta property="og:description" content="JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/jvm-sandbox-1/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-09-13T11:51:54+08:00" />
+<meta property="article:modified_time" content="2023-09-13T11:51:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-mem/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-cpu/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-tool/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-1/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/jvm/" title="jvm">jvm</a>
+            
+            <a class="tag" href="/tags/java/" title="java">java</a>
+            
+            <a class="tag" href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/" title="字节码">字节码</a>
+            
+          </div>
+          <h1>JVM-SANDBOX导致目标服务JVM Metaspace OOM的调查始末</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Wed, Sep 13, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="背景">背景<a class="anchorjs-link" href="#%e8%83%8c%e6%99%af"></a></h1><p>放火平台是公司内部研发的平台:遵循混沌工程理念通过故障注入模式对系统进行演练的实施平台，提供丰富的故障场景模拟，以可视化、自动化的方式实施故障演练。</p>
+<p>放火平台利用字节增强框架<a href="https://github.com/alibaba/jvm-sandbox" target="_blank">JVM-SANDBOX</a>对java类型的服务进行故障注入。在业务线使用的过程中发现在放火平台对某个java进程故障注入后故障没有生效</p>
+<p>在经过排查后发现主要是开源项目<a href="https://github.com/alibaba/jvm-sandbox" target="_blank">JVM-SANDBOX</a>的bug，其中涉及到ThreadLocal，ClassLoader，Metaspace等相关知识，具体的分析以及优化过程可以往下看。</p>
+<h1 id="注入流程">注入流程<a class="anchorjs-link" href="#%e6%b3%a8%e5%85%a5%e6%b5%81%e7%a8%8b"></a></h1><p>放火平台注入java故障的流程:</p>
+<p>在注入故障时放火平台会把故障指令下发到目标机器的chaos-agent上，chaos-agent利用开源项目jvm-sandbox对目标jvm进行故障注入和故障清除。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/b2/b26c0edf27aca53fa108ddcc2ae703c3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>关于jvm-sandbox的工作流程和原理可以参考之前的文章:<a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;mid=2247483894&amp;idx=1&amp;sn=8a6737f1b2d4cd5bba1efc1e21a56186&amp;chksm=cedb07bff9ac8ea997febd335b6622ee42f2d86bd119a1e77b73d695aaff4d2fe55274eda1d1&amp;token=797555132&amp;lang=zh_CN#rd" target="_blank">透过JVM-SANDBOX源码，了解字节码增强框架的底层实现原理</a></p>
+<h1 id="排查过程">排查过程<a class="anchorjs-link" href="#%e6%8e%92%e6%9f%a5%e8%bf%87%e7%a8%8b"></a></h1><h2 id="日志表现">日志表现<a class="anchorjs-link" href="#%e6%97%a5%e5%bf%97%e8%a1%a8%e7%8e%b0"></a></h2><p>在注入无效后登陆目标机器上观察日志，首先发现jvm-sandbox在attach目标jvm时失败了</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/97/97c9975ee7ccd34b152e75191dd3061d.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>其次看到更关键的日志:Metaspace 溢出了！！！</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/d0/d0ad1f45ca70f821a3aef1f8d4b07037.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="metaspace">Metaspace<a class="anchorjs-link" href="#metaspace"></a></h2><p>Metaspace是什么，引用官方介绍</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>Metaspace is a native (as in: off-heap) memory manager in the hotspot.
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>It is used to manage memory for class metadata. Class metadata are allocated when classes are loaded. Their lifetime is usually scoped to that of the loading classloader - when a loader gets collected, all class metadata it accumulated are released in bulk.
+</span></span></code></pre></div><p><strong>简单来说：Metapace是一块非堆内存，用来存储类的元数据，当加载类的时候会在Metaspace中分配空间存储类的元数据，当某个ClassLoader关闭时会对应释放掉对类元数据的引用，当触发GC时这部分类元数据占用的空间即可在Metaspace中被回收掉。</strong></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/e7/e7b2d3800f2ae2045d6392180037f311.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>在jdk1.8以前jvm中有一块区域叫永久代（PermGen）大家肯定都不陌生，永久代中有包含方法区以及常量池。不过在1.8的时候将永久代彻底移出jvm，将永久代中存储的数据转移到了Java Heap 或 Metaspace</p>
+<ol>
+<li>
+<p>方法区迁移到Java Metaspace中</p>
+</li>
+<li>
+<p>字符串常量池则由永久代迁移到了Java Heap中</p>
+</li>
+</ol>
+<p>相关参数:</p>
+<ol>
+<li>
+<p>**-XX:MetaspaceSize **是分配给类元数据空间（以字节计）的初始大小(Oracle逻辑存储上的初始高水位，the initial high-water-mark )，此值为估计值。MetaspaceSize的值设置的过大会延长垃圾回收时间。垃圾回收过后，引起下一次垃圾回收的类元数据空间的大小可能会变大。</p>
+</li>
+<li>
+<p><strong>-XX:MaxMetaspaceSize</strong> 是分配给类元数据空间的最大值，超过此值就会触发Full GC，此值默认没有限制，但应取决于系统内存的大小。JVM会动态地改变此值。</p>
+</li>
+<li>
+<p><strong>-XX:MinMetaspaceFreeRatio</strong> 表示一次GC以后，为了避免增加元数据空间的大小，空闲的类元数据的容量的最小比例，不够就会导致垃圾回收。</p>
+</li>
+<li>
+<p>**-XX:MaxMetaspaceFreeRatio **表示一次GC以后，为了避免增加元数据空间的大小，空闲的类元数据的容量的最大比例，不够就会导致垃圾回收。</p>
+</li>
+</ol>
+<p>关于Metaspace 就不展开讲了,目前介绍的内容足够我们向下排查和分析，感兴趣的同学可以搜索相关资料。</p>
+<h2 id="分析原因">分析原因<a class="anchorjs-link" href="#%e5%88%86%e6%9e%90%e5%8e%9f%e5%9b%a0"></a></h2><p>通过注入流程以及Metaspace的介绍，我们了解到在故障注入时会将jvm-sandbox动态的挂载(attach)到目标进程JVM上,在attach后会加载sandbox内部jar以及sandbox的自定义模块jar等，在这个过程中会加载大量的类，当加载类时会分配Metaspace空间存储类的元数据。</p>
+<p>到这里思考了两个点:</p>
+<ol>
+<li>
+<p><strong>第一直观感受是这个流程没毛病呀，会不会是因为业务服务JVM的Metaspace空间设置的太小？</strong></p>
+</li>
+<li>
+<p><strong>Metaspace的GC 没有触发或者是有泄露导致类的元数据回收不掉？</strong></p>
+</li>
+</ol>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/4f/4fe9308dd94c5d84cd7ad691abff3621.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="尝试解决">尝试解决<a class="anchorjs-link" href="#%e5%b0%9d%e8%af%95%e8%a7%a3%e5%86%b3"></a></h2><p>登陆到目标机器上利用jinfo观察jvm的参数,发现MaxMetaspaceSize设置了128M，这个值确实不大，因为MaxMetaspaceSize的默认是-1(无限制，受限于本地内存)。</p>
+<p>让业务服务调整MaxMetaspaceSize参数改为256M，然后重启java进程，再次故障注入 确实没问题了，故障正常生效了。</p>
+<p><strong>但实际问题没怎么简单，在连续注入多次后依然出现Metaspace OOM 故障依旧无效。看来应该是故障清除时无法回收掉Metaspace中对应的空间。这个问题就比较严重了，如果不解决业务服务是不敢用放火平台进行java类型的故障注入了。</strong></p>
+<p>不过到这里 我们已经清晰知道这个问题的复现途径了，就是不断的故障注入以及故障清除在达到一定次数后就会Metaspace OOM，本地复现接着排查吧。</p>
+<h2 id="本地复现">本地复现<a class="anchorjs-link" href="#%e6%9c%ac%e5%9c%b0%e5%a4%8d%e7%8e%b0"></a></h2><p>利用JVM-SANDBOX提供的demo模块做验证，看一下会不会出现Metaspace OOM。</p>
+<h3 id="参数设置">参数设置<a class="anchorjs-link" href="#%e5%8f%82%e6%95%b0%e8%ae%be%e7%bd%ae"></a></h3><p>启动参数设置了MaxMetaspaceSize=30M，因为demo模块类非常少，其次为了快速的复现OOM。</p>
+<p>TraceClassLoading和TraceClassUnloding参数则是为了观察JVM-SANDBOX在故障注入和清除时加载/卸载类的信息。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/d7/d79c998a0b7d20faa4d22a8c8f3c5585.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>在启动服务后观察目标服务的Metaspace小于7M</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/f1/f1856ed5ce6443b4694e2a27991fa99e.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h3 id="首次注入">首次注入<a class="anchorjs-link" href="#%e9%a6%96%e6%ac%a1%e6%b3%a8%e5%85%a5"></a></h3><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./sandbox.sh -p 19264 -d &#39;broken-clock-tinker/repairCheckState&#39;
+</span></span></code></pre></div><p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/39/390fb734b057b8734eccd9c7c0235a55.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>看到确实加载了很多jvm-sandbox的类，Metaspace 也上升到了14M，这个属于正常情况。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/b9/b9c8e21946c454fdc73bef4d454a9e74.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h3 id="故障清除">故障清除<a class="anchorjs-link" href="#%e6%95%85%e9%9a%9c%e6%b8%85%e9%99%a4"></a></h3><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>./sandbox.sh -p 19264 -S
+</span></span></code></pre></div><p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/b0/b0095896852097fb95ab399df085b08e.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>在故障清除时没有看到UnLoad类的相关信息，Metaspace也没有被回收还是14M</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/ef/ef4be6127752c0af2b58997d8dafa274.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h3 id="多次注入清除">多次注入&amp;清除<a class="anchorjs-link" href="#%e5%a4%9a%e6%ac%a1%e6%b3%a8%e5%85%a5%e6%b8%85%e9%99%a4"></a></h3><p>在多次注入以及清除的操作后，复现了线上业务出现的Metaspace OOM，可以看到在多次注入的过程中，Metaspace一直没有被回收过，占用空间曲线是一路上升。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/06/063e084367dfd604b2811b7c0d7fe4b1.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/db/db64398fc9c43f08f04d2ae635d01e94.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="问题排查">问题排查<a class="anchorjs-link" href="#%e9%97%ae%e9%a2%98%e6%8e%92%e6%9f%a5"></a></h2><h3 id="classloader-关闭失败">ClassLoader 关闭失败<a class="anchorjs-link" href="#classloader-%e5%85%b3%e9%97%ad%e5%a4%b1%e8%b4%a5"></a></h3><p>上面的分析以及复现都可以确认Metaspace OOM就是因为Metaspace没有进行过回收，Metaspace回收的前提是ClassLoader关闭，在之前的<a href="https://mp.weixin.qq.com/s?__biz=Mzg3MzgxMjc3NA==&amp;mid=2247483894&amp;idx=1&amp;sn=8a6737f1b2d4cd5bba1efc1e21a56186&amp;chksm=cedb07bff9ac8ea997febd335b6622ee42f2d86bd119a1e77b73d695aaff4d2fe55274eda1d1&amp;token=797555132&amp;lang=zh_CN#rd" target="_blank">文章</a>中介绍了JVM-SANDBOX在shutdown时会关闭ClassLoader。</p>
+<p>在JVM-SANDBOX中自定义的ClassLoader都是继承了URLClassLoader，URLClassLoader的关闭方法 官方介绍：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>How to Close a URLClassLoader?
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>The URLClassLoader close() method effectively eliminates the problem of how to support updated implementations of the classes and resources loaded from a particular codebase, and in particular from JAR files. In principle, once the application clears all references to a loader object, the garbage collector and finalization mechanisms will eventually ensure that all resources (such as the JarFile objects) are released and closed.
+</span></span></code></pre></div><p>简单来说：当classLoader加载的所有类没有被引用时即可被关闭。</p>
+<p>看到这里严重怀疑:<strong>当故障清除时jvm-sandbox中的类还有被引用的情况导致classloader 关闭失败了。</strong></p>
+<h3 id="验证猜想">验证猜想<a class="anchorjs-link" href="#%e9%aa%8c%e8%af%81%e7%8c%9c%e6%83%b3"></a></h3><p>**在故障清除后，在目标服务的方法上debug看一下线程信息，果然在threadLocal中找到了两个jvm-sandbox的内部类（EventProcesser$Process,SandboxProtector）的引用。说明猜想是对的，问题的原因就是出现在这里了。**下一步就是分析在jvm-sandbox执行故障清除后为什么还有对这两个类的引用。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/82/82e66633b5bd0dbbbee901a24c4751ae.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h3 id="eventprocessor">EventProcessor<a class="anchorjs-link" href="#eventprocessor"></a></h3><p>在JVM-SANDBOX中<strong>EventProcessor</strong>是事件处理器，其中包含了用户自定义的 listener 以及 listenerId，在执行增强代码时会记录调用的堆栈。记录堆栈利用ThreadLocal 将真正的处理单元<strong>Process</strong>对象包装起来，目的就是每个调用都可以正确记录自己的堆栈。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>final ThreadLocal&lt;Process&gt; processRef = new ThreadLocal&lt;Process&gt;() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>    @Override
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>    protected Process initialValue() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>        return new Process();
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>    }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>};
+</span></span></code></pre></div><p>这里的源码就不带大家分析了，主要是jvm-sandbox的代码实现有bug，在以下两种情况会导致processRef的ThreadLocal没有及时remove造成泄漏</p>
+<ol>
+<li>假如在执行注入故障的过程中，进行故障清除会导致泄漏。如下：</li>
+</ol>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/ce/ceb7911a21941799d331f38ca26ee3b8.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ol start="2">
+<li>假设使用了jvm-sandbox的特性-流程变更（例如立即返回，立即抛出异常），本质也是thread local没有及时remove，导致造成了泄漏</li>
+</ol>
+<h3 id="sandboxprotector">SandboxProtector<a class="anchorjs-link" href="#sandboxprotector"></a></h3><p>SandboxProtector:Sandbox守护者，用来守护接口定义的方法，使得sandbox操作的事件不被响应。</p>
+<p>在验证时我们看到SandboxProtector也有ThreadLocal泄漏的情况，这里get=0的时候应该及时remove掉。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>    /**
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>	     * 判断当前是否处于守护区域中
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>	     *
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>	     * @return TRUE:在守护区域中；FALSE：非守护区域中
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>	     */
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>	    public boolean isInProtecting() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>	        return isInProtectingThreadLocal.get().get() &gt; 0;
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span>	    }
+</span></span></code></pre></div><h1 id="改进验证">改进验证<a class="anchorjs-link" href="#%e6%94%b9%e8%bf%9b%e9%aa%8c%e8%af%81"></a></h1><p>通过上面的分析，已经清晰的知道问题的根因，那么直接动手改代码看一下修复后的效果。</p>
+<h2 id="多次注入清除-1">多次注入&amp;清除<a class="anchorjs-link" href="#%e5%a4%9a%e6%ac%a1%e6%b3%a8%e5%85%a5%e6%b8%85%e9%99%a4-1"></a></h2><p>启动参数还是相同的 MaxMetaspaceSize=30M，经过优化后多次注入和清除不会出现Metaspace OOM。</p>
+<p>下面是一些验证的过程：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/52/5283051443ca3766133faa8f0299dbac.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>也可以看到Metaspace会进行回收了</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/87/876c771872a26c59c83601b9f26134b3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>卸载类的信息也打印出来了</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="https://static001.geekbang.org/infoq/e9/e9fb14e62b7840be3073196118230fdf.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h1 id="总结">总结<a class="anchorjs-link" href="#%e6%80%bb%e7%bb%93"></a></h1><p>放火平台利用开源项目JVM-SANDBOX对java类服务进行故障注入，在故障清除时由于JVM-SANDBOX中对ThreadLocal使用不当导致发生泄漏，从而引发关闭ClassLoader失败，最终导致Metaspace OutOfMemoryError。</p>
+<p>JVM-SANDBOX社区目前已经处于不活跃状态，我们将JVM-SANDBOX fork到了CNCF 沙箱项目ChaosBlade中，后面将独立维护。本次修改的相关代码已经提交到社区:<a href="https://github.com/chaosblade-io/jvm-sandbox/pull/1" target="_blank">PR</a></p>
+<p>在公司中有不少项目使用了JVM-SANDBOX，如果有类似这种多次挂载和卸载的操作，需要注意下这个问题。</p>
+<h1 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h1><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/jvm-sandbox/" data-toggle="tooltip" data-placement="top" title="透过JVM-SANDBOX源码,了解字节码增强技术">
+              Previous<br>
+              <span>透过JVM-SANDBOX源码,了解字节码增强技术</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/cpu/">cpu</a>
+    
+    <a href="/tags/java/">java</a>
+    
+    <a href="/tags/jvm/">jvm</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/mem/">mem</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">字节码</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
