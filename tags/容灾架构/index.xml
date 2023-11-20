@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>容灾架构 on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/</link>
+    <description>Recent content in 容灾架构 on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 20 Nov 2023 10:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>探索容灾架构演进之路-从单点到异地多活</title>
+      <link>https://binbin0325.github.io/posts/same-city-1/</link>
+      <pubDate>Mon, 20 Nov 2023 10:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/same-city-1/</guid>
+      <description>1. 挑战与变革在公司发展初期，业务发展和用户增长是首要关注的焦点。然而，随着业务规模不断扩大，用户数量逐渐攀升，应用稳定性的重要性也变得愈发凸</description>
+    </item>
+    
+  </channel>
+</rss>
