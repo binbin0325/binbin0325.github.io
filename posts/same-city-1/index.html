@@ -215,14 +215,14 @@
 <h3 id="2-理解传统部署架构的局限性">2. 理解传统部署架构的局限性<a class="anchorjs-link" href="#2-%e7%90%86%e8%a7%a3%e4%bc%a0%e7%bb%9f%e9%83%a8%e7%bd%b2%e6%9e%b6%e6%9e%84%e7%9a%84%e5%b1%80%e9%99%90%e6%80%a7"></a></h3><p>在业务发展初期应用部署架构相对简单，但没有任何灾备能力，当存储或应用故障时整个业务将会中断。 </p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6f097c807c1b48aaa321e5481f0048bf~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=474&amp;h=920&amp;s=46919&amp;e=png&amp;b=fefbfb" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-1.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
 <p>为了提高可用性架构会演进成将存储进行主从部署，当存储故障时可由从库快速切换为主库继续提供服务，同时也开始将业务应用和接入层多实例部署，进一步提高可用性。</p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8f14060a1f144576a79a1ee9ad3f73fc~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=798&amp;h=864&amp;s=70138&amp;e=png&amp;b=fdf9f9" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-2.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -230,7 +230,7 @@
 <p>随着业务进一步发展，业务应用也开始由单体应用向微服务演进，随着新应用的加入整体架构如下。</p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8156093d18264e12b400c6a1bb70d497~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1366&amp;h=862&amp;s=88906&amp;e=png&amp;b=fefbfb" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-3.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -245,7 +245,7 @@
 </ul>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7be66e9a9396433fa8d7212964dcd43f~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1920&amp;h=720&amp;s=127700&amp;e=png&amp;b=fefdfd" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-4.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -260,7 +260,7 @@
 <p> </p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/de2a905f35c34cac9fbd87d76cc43a51~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1920&amp;h=621&amp;s=142620&amp;e=png&amp;b=fefdfd" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-5.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -273,7 +273,7 @@
 </ul>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/bc9bc64830fa49a39f126f9af36707b9~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1920&amp;h=839&amp;s=169111&amp;e=png&amp;b=fefdfd" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-6.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -281,7 +281,7 @@
 <p>异地多活是最理想态的容灾部署方案，部署多个数据中心，数据中心可以无限水平扩展，多个数据中心同时对外提供服务，任意数据中心故障时可以将流量切换到其他数据中心。不过异地多活的挑战也是最多的，要在同城双活的基础上实现单元化，不同数据中心之间的数据同步以及管控系统的多活等等，每一个挑战都是困难且复杂的。</p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/1fe67acf3ef949e88a5fd58a654e5d26~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1830&amp;h=904&amp;s=111630&amp;e=png&amp;b=fefbfb" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-7.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -290,7 +290,7 @@
 <p>通过上面的介绍不难看出，这几种容灾架构的对应的可用性是逐步提高的，事情都是具有两面性的，在可用性逐步提供的同时整个部署架构的复杂性和成本也是再升高的。</p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/72d167c0ffc64962b02d991424847e9f~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1458&amp;h=458&amp;s=40421&amp;e=png&amp;b=fefbfb" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-8.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
@@ -299,7 +299,7 @@
 <p>因此，在选择容灾架构时，公司需要明智地权衡可用性需求和维护这种冗余结构所需的资源投入。这种平衡是一个关键的战略决策，影响着企业的业务连续性和整体稳定性。</p>
 <p><figure>
   <a class="paragraph-image">
-    <img data-src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6a67106987f04225b45a75172fa3609a~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=964&amp;h=322&amp;s=19732&amp;e=png&amp;b=fefafa" data-action="zoom" alt=""  class="lazyload">
+    <img data-src="/same-city/1/same-city-9.png" data-action="zoom" alt=""  class="lazyload">
   </a>
   
 </figure></p>
