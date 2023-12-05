@@ -6,7 +6,16 @@
     <description>Recent content in Themes Guide on binbin0325</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 20 Nov 2023 10:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/series/themes-guide/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 05 Dec 2023 10:00:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/series/themes-guide/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>同城双活的必修课 - 落地经验与关键挑战解析</title>
+      <link>https://binbin0325.github.io/posts/same-city-2/</link>
+      <pubDate>Tue, 05 Dec 2023 10:00:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/same-city-2/</guid>
+      <description>1. 同城双活是什么同城双活是一种容灾架构的设计模式，主要用于提高系统的可用性和容错性。它通常涉及在同一个城市内建立两个数据中心（机房），这两个</description>
+    </item>
+    
     <item>
       <title>探索容灾架构演进之路-从单点到异地多活</title>
       <link>https://binbin0325.github.io/posts/same-city-1/</link>

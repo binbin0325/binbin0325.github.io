@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>同城双活的必修课 - 落地经验与关键挑战解析 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="同城双活的必修课 - 落地经验与关键挑战解析">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="同城双活的必修课 - 落地经验与关键挑战解析"/>
+<meta name="twitter:description" content="同城双活的必修课 - 落地经验与关键挑战解析"/>
+
+  <meta property="og:title" content="同城双活的必修课 - 落地经验与关键挑战解析" />
+<meta property="og:description" content="同城双活的必修课 - 落地经验与关键挑战解析" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/same-city-2/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-12-05T10:00:54+08:00" />
+<meta property="article:modified_time" content="2023-12-05T10:00:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/same-city-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-mem/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-cpu/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/%E5%90%8C%E5%9F%8E%E5%8F%8C%E6%B4%BB/" title="同城双活">同城双活</a>
+            
+            <a class="tag" href="/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/" title="容灾架构">容灾架构</a>
+            
+            <a class="tag" href="/tags/%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB/" title="异地多活">异地多活</a>
+            
+          </div>
+          <h1>同城双活的必修课 - 落地经验与关键挑战解析</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Tue, Dec 5, 2023
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="1-同城双活是什么">1. 同城双活是什么<a class="anchorjs-link" href="#1-%e5%90%8c%e5%9f%8e%e5%8f%8c%e6%b4%bb%e6%98%af%e4%bb%80%e4%b9%88"></a></h1><p>同城双活是一种容灾架构的设计模式，主要用于提高系统的可用性和容错性。它通常涉及在同一个城市内建立两个数据中心（机房），这两个数据中心同时对外提供服务，实现了高可用性和冗余。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-1.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><strong>关键特点和优势包括：</strong></p>
+<p><strong>双活部署</strong>： 两个数据中心都处于活跃状态，同时处理用户请求。这样，当一个数据中心发生故障或维护时，另一个数据中心可以继续提供服务，确保业务的连续性。</p>
+<p><strong>故障隔离：</strong> 如果一个数据中心遇到故障，可以将流量切换到另一个正常工作的数据中心，减少服务中断时间。</p>
+<p><strong>负载均衡：</strong> 双活架构通常会利用DNS进行分流，让流量按照一定比例分布到两个数据中心，提高整体性能和吞吐量。</p>
+<p><strong>降低延迟：</strong> 由于两个数据中心都位于同一个城市，网络延迟相对较低，有助于提供更快的服务响应时间。</p>
+<p><strong>灾难恢复：</strong> 在同城双活的架构下，即使发生了灾难性事件，比如自然灾害，仍然有一个可用的数据中心，可以更迅速地进行灾难恢复。</p>
+<p> </p>
+<p>需要注意的是，同城双活虽然提高了系统的可用性，但仍然存在无法解决的一些单点故障和问题，例如城市级别的停电或其他灾难性事件。在一些对服务连续性要求极高的场景中，可能需要考虑更复杂的容灾架构，如异地多活。</p>
+<p> </p>
+<h1 id="2-什么样的业务需要同城双活">2. 什么样的业务需要同城双活<a class="anchorjs-link" href="#2-%e4%bb%80%e4%b9%88%e6%a0%b7%e7%9a%84%e4%b8%9a%e5%8a%a1%e9%9c%80%e8%a6%81%e5%90%8c%e5%9f%8e%e5%8f%8c%e6%b4%bb"></a></h1><p>任何对高可用有要求的业务都可以在容灾架构上选择同城双活,同城双活是异地多活的基础。</p>
+<h1 id="3-双活的部署范围">3. 双活的部署范围<a class="anchorjs-link" href="#3-%e5%8f%8c%e6%b4%bb%e7%9a%84%e9%83%a8%e7%bd%b2%e8%8c%83%e5%9b%b4"></a></h1><h2 id="31-全量服务双活or部分服务双活">3.1 全量服务双活or部分服务双活<a class="anchorjs-link" href="#31-%e5%85%a8%e9%87%8f%e6%9c%8d%e5%8a%a1%e5%8f%8c%e6%b4%bbor%e9%83%a8%e5%88%86%e6%9c%8d%e5%8a%a1%e5%8f%8c%e6%b4%bb"></a></h2><p>通常在同城双活架构中不是所有业务服务都必须进行双活部署，而是根据业务的特性和需求来进行选择，因为这涉及到成本和复杂性的权衡。有些业务服务可能并不是那么关键，或者其可用性要求并不高，在这种情况下，单活部署足够满足需求，同时减少了系统的复杂性和成本。</p>
+<p> </p>
+<p>大多数公司会选择对一些关键业务中需要高可用性的服务，进行双活部署。而对非关键服务采取单活部署的方式，以平衡系统的可用性和成本。这样，即使一个数据中心发生故障不会导致关键业务不可用。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-2.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="32-哪一部分双活">3.2 哪一部分双活？<a class="anchorjs-link" href="#32-%e5%93%aa%e4%b8%80%e9%83%a8%e5%88%86%e5%8f%8c%e6%b4%bb"></a></h2><p><strong>1.挑选要双活的业务</strong></p>
+<p>首先需要确定哪一个业务双活，在一个互联网公司通常有好多个业务，例如阿里的淘宝、阿里云，字节的头条、抖音，滴滴的网约车，两轮车等等。建立双活首先确定好业务，然后找到业务中最核心的链路去建设双活（确定哪个业务搞双活通常和公司的战略息息相关）</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><strong>2.确定业务的核心链路</strong></p>
+<p>在业务领域，核心链路可能表示业务流程中最关键、最重要的步骤或环节。这些环节是直接影响业务成功的关键步骤，比如滴滴网约车业务中核心链路有乘客发单，司机接单，完单等等</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-4.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>对核心业务的核心链路建设双活，保证在单机房故障时核心链路在另一个机房可以继续运转，保证核心链路不受影响既是保证了业务的成交量不受影响，那么整体的损失就相对较小。</p>
+<p> </p>
+<p>在微服务盛行的时代，通常一条核心链路一定会包含多个服务，这其中会涉及到网关，业务服务，中台服务，中间件、存储等等</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-5.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="33-核心链路的服务如何梳理">3.3 核心链路的服务如何梳理<a class="anchorjs-link" href="#33-%e6%a0%b8%e5%bf%83%e9%93%be%e8%b7%af%e7%9a%84%e6%9c%8d%e5%8a%a1%e5%a6%82%e4%bd%95%e6%a2%b3%e7%90%86"></a></h2><p>通常一条核心链路中就包含了多个服务，那么具体包含哪些服务(业务&amp;存储等)，这些服务又该如何梳理呢？通常的做法：首先需要人工梳理标记，最起码先标记处某一个链路的入口，例如乘客发单的入口是/create/order，然后结合全链路追踪能力观察从发单入口进来的流量（ 生产流量，压测流量，测试流量）都经过哪些服务从而梳理出发单链路所涉及到的服务。</p>
+<p> </p>
+<p>不过在一个大公司内，由于各种历史原因（懂的都懂）全链路追踪很有可能覆盖不全，那么就需要再结合日志以及监控等信息来弥补全链路追踪断链的情况，从而不断的完善与标记这条核心链路中所涉及到的服务，整个核心链路标记与维护的过程，大多数公司都是从最开始的人工到后期慢慢形成产品，自动化进行标记。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-6.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<h2 id="34-核心链路的问题">3.4 核心链路的问题<a class="anchorjs-link" href="#34-%e6%a0%b8%e5%bf%83%e9%93%be%e8%b7%af%e7%9a%84%e9%97%ae%e9%a2%98"></a></h2><p>经过上面的梳理核心链路逐渐成型，但是问题也接踵而来。<strong>核心链路上的服务可能会越来越多，都要在双活架构中等量部署到新机房嘛？</strong></p>
+<p> </p>
+<p>答案：<strong>所谓的核心服务也并不一定要全量部署到新机房做双活</strong>，因为通过人工，全链路，日志，监控等手段标记的核心服务往往是大而全的，这里面标记出来的服务可能有很多，但是其中也有可能是弱依赖服务，弱依赖服务在同城双活部署场景下并不是必须的。</p>
+<ul>
+<li><strong>强依赖服务：</strong> 当一个服务是强依赖，意味着当这个服务出现故障不可用时，整个链路将会收到影响，甚至是整个系统的稳定性和可用性都会受到影响。</li>
+<li><strong>弱依赖服务：</strong> 当一个服务是弱依赖，意味着当这个服务出现故障不可用时，系统仍然可以部分或完全运行。弱依赖的设计有助于系统的弹性和容错性，因为系统的一部分可以在其他部分不可用的情况下继续运行。</li>
+</ul>
+<p> </p>
+<p>如果是在小公司可能不用考虑这件事，但在具有一定规模的公司内，核心链路上的服务也许也会很多。如果全量部署成本依然会很高，特别是在提倡降本增效的近几年，双活的成本也是需要控制的。所以如果要做到成本可控，<strong>那么就需要找到核心链路中的强依赖服务部署在新机房做双活。</strong></p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-7.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<h2 id="35-找到核心链路的最小集强依赖">3.5 找到核心链路的最小集（强依赖）<a class="anchorjs-link" href="#35-%e6%89%be%e5%88%b0%e6%a0%b8%e5%bf%83%e9%93%be%e8%b7%af%e7%9a%84%e6%9c%80%e5%b0%8f%e9%9b%86%e5%bc%ba%e4%be%9d%e8%b5%96"></a></h2><p>如何识别核心链路中的强弱依赖？最简单的就是研发/运维人员手动筛选，但是<strong>随着系统变得复杂以及系统频繁的变更，弱依赖服务也有可能变成强依赖服务</strong>，<strong>人工筛选成本太高而且准确性也难以得到保证。</strong></p>
+<p> </p>
+<p>如果你了解过混沌工程，也许会知道可以通过混沌工程主动模拟服务/接口故障，从而来梳理核心链路中服务的强弱依赖关系。梳理强弱依赖的好处 除了在双活加固场景下找到需要双活的最小链路集合，还可以针对强弱依赖做很多稳定性建设的事情，例如针对强依赖服务要建设限流能力，针对弱依赖服务要建设降级能力等等。这里涉及到的细节特别多，包括流量的来源，混沌工程平台的注入能力，核心链路的数据，可观测的能力，稳态的定义等等，在本文就不展开讲了，后面会单独写一篇文章介绍。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-8.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<h2 id="36-小结">3.6 小结<a class="anchorjs-link" href="#36-%e5%b0%8f%e7%bb%93"></a></h2><p>在同城双活中，不是所有业务都需要双活，而是根据业务的关键性和可用性需求有选择地进行部署。核心链路的确定和梳理是双活实施的核心，找到核心链路中强依赖服务进行双活部署是成本最小，最理想化的双活部署范围。</p>
+<h1 id="4-同城双活的其他关键因素">4. 同城双活的其他关键因素<a class="anchorjs-link" href="#4-%e5%90%8c%e5%9f%8e%e5%8f%8c%e6%b4%bb%e7%9a%84%e5%85%b6%e4%bb%96%e5%85%b3%e9%94%ae%e5%9b%a0%e7%b4%a0"></a></h1><p><strong>管控服务高可用</strong></p>
+<p>各种运维组件的管控层可用性往往会遭到忽视，但管控平台的高可用特别特别重要的。有很多真实发生的故障往往是因为管控层高可用能力建设不到位，导致出现故障后不能快速恢复。这里的细节特别多,举几个例子：</p>
+<ul>
+<li>假设是自动化切流，切流的平台在机房A单活或着对机房A的其他管控/存储有强依赖，那么当机房A故障时也无法完成切流动作，即使业务层和存储层的双活做的再好也没有任何用。</li>
+<li>假设故障时顺利切流（无论是自动/手动），当机房B承接了全部流量后，那监控、预案，限流，扩容等平台也不能在机房A单活或者对机房A的其他管控/存储有强依赖，因为当全部流量都切到机房B时，很有可能出现容量不足的情况，那么此时需要扩容/限流/降级等操作，如果这些操作依赖的管控平台不好用，可能会导致机房B也出现问题。</li>
+</ul>
+<p> </p>
+<p>由于管控平台大多数是由不同的团队进行研发，每一个管控平台的架构可能都不同，管控平台保证高可用的方案也都不一样，不过通常有两种：<strong>双活或冷备</strong>，最终的目标只需要保证在故障时管控平台在另一个机房可用即可。建设的思路一般都是梳理强弱依赖，对强依赖改造为弱依赖，若改造不了，则需要对强依赖服务在单机房内完成闭环调用，不能跨机房调用。</p>
+<p> </p>
+<p><strong>存储服务高可用</strong></p>
+<p>在同城双活的场景下，两个机房间通过同城专线进行数据传输，延时相对较低。在这个背景下不同的存储服务有不同的方案，这里面挑两个最常见的组件简单介绍下，例如：</p>
+<ul>
+<li><strong>mysql</strong></li>
+</ul>
+<p>通常是主从模式部署，机房A部署主库，机房B部署从库，两个机房间存储会进行数据同步。这种场景下机房B的业务服务需要做改造将写请求路由到机房1的主库，将读请求路由到本机房的从库。（改造的方案可以利用中间件进行读写分离，例如shardingsphere，一般大厂也都有自研的存储代理组件负责读写分离）</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-9.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li><strong>redis</strong></li>
+</ul>
+<p>业界通常的做法有主从架构、双写架构、双向同步架构</p>
+<ul>
+<li>主从架构：和mysql主从模式相同，机房A部署主库，机房B部署从库，使用原生主从复制保证数据一致性（类似于codis的设计思路）</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-10.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li>双写架构：双机房都部署redis主库和从库，业务流量在单机房完成读写请求闭环，由proxy完成对端机房异步写，不过这种方案有可能由于网络问题导致双机房redis数据不一致</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-11.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li>双向同步架构：双机房都部署redis主库和从库，业务流量单机房完成读写请求闭环，proxy不需要进行异步写入对端机房，在redis server层进行双机房互相同步来保证数据一致性，需要解决数据冲突，要单独开发、成本较高（双向同步架构可以做为异地多活的基础能力）</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-12.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<h1 id="5-如何验证同城双活是否可用">5. 如何验证同城双活是否可用<a class="anchorjs-link" href="#5-%e5%a6%82%e4%bd%95%e9%aa%8c%e8%af%81%e5%90%8c%e5%9f%8e%e5%8f%8c%e6%b4%bb%e6%98%af%e5%90%a6%e5%8f%af%e7%94%a8"></a></h1><p>当整体的同城双活工作都完成后，需要验证甚至是定期验证同城双活的能力是否可用，避免真出故障时才发现工作做的不够完善，也有可能因为架构的不断演进导致同城双活能力退化。<strong>那这里还是可以借助混沌工程思想，通过故障注入来对同城双活的能力进行演练验收</strong>。当模拟了单机房故障后，可以演练管控平台是否能正常进行切流，扩容，限流，降级等一系列操作，观察业务核心指标是否可以在双活机房迅速恢复，从而判断同城双活是否符合预期。</p>
+<p> </p>
+<p>演练验证通常有两种做法：</p>
+<ul>
+<li><strong>断专线</strong>：如果同城双活能力做的足够好，足够有信心，可以选择直接针对两个机房间的专线进行网络熔断（例如交换机上down端口），这种方式简单、粗暴、有效、可以较好的模拟单个机房故障。</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-13.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<ul>
+<li><strong>精细化故障注入</strong>：通常在一个机房内部署的服务不仅仅只有做了双活的业务，如果还有一些业务服务没有做双活，那么上面直接断专线演练肯定会影响这种单活的业务服务，所以需要按需去做精细化演练，例如对所有已经完成双活的业务服务注入网络故障，让其失联（无法访问其他服务/机房，也无法被其他服务访问，来模拟双活业务发生机房故障）</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/same-city/2/same-city-2-14.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<p>需要考虑如果用生产流量演练，可能会造成一定的损失，这里要看接入层的分流能力，接入层可以提前将大部分流量切换到单个机房，然后留一小部分流量在低峰期进行演练验证，降低损失。压测流量的话需要考虑压测流量的覆盖度以及仿真度，如果不够全面和真实那么对演练和验收的效果也都会打折扣。</p>
+<h1 id="6-总结">6. 总结<a class="anchorjs-link" href="#6-%e6%80%bb%e7%bb%93"></a></h1><p>同城双活作为一种容灾架构，通过在同一城市建立两个数据中心，以确保在一个数据中心发生故障时，系统能够快速切换到另一个数据中心，从而提高系统的可用性。在部署需要双活的服务时，首先要仔细评估业务的关键性和可用性需求，梳理业务的核心链路是双活的关键抓手，通过将核心链路中的强依赖服务作为重点部署对象，实现最小集的同城双活部署，降低双活成本。除了业务服务双活以外，管控和存储的高可用能力也是故障切换时的关键因素。</p>
+<p> </p>
+<p>为了验证同城双活的可用性，可以利用混沌工程模拟单一数据中心的故障，进行演练关键操作，如切流、扩容、限流等，以确保系统能够在故障发生时迅速而可靠地恢复。这种方法有助于发现潜在的问题并提前制定有效的故障应对方案，确保业务连续性和稳定性。</p>
+<h3 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h3><p>Github 账号：<a href="https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fbinbin0325" title="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="https://link.juejin.cn?target=https%3A%2F%2Fbinbin0325.github.io%2Fabout" title="https://binbin0325.github.io/about" target="_blank">柠檬汁Code</a>，<a href="https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Falibaba%2Fsentinel-golang" title="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fchaosblade-io%2Fchaosblade" title="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Falibaba%2Fnacos" title="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fapache%2Fdubbo-go" title="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/same-city-1/" data-toggle="tooltip" data-placement="top" title="探索容灾架构演进之路-从单点到异地多活">
+              Previous<br>
+              <span>探索容灾架构演进之路-从单点到异地多活</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/cpu/">cpu</a>
+    
+    <a href="/tags/java/">java</a>
+    
+    <a href="/tags/jvm/">jvm</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/mem/">mem</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E5%90%8C%E5%9F%8E%E5%8F%8C%E6%B4%BB/">同城双活</a>
+    
+    <a href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">字节码</a>
+    
+    <a href="/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/">容灾架构</a>
+    
+    <a href="/tags/%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB/">异地多活</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2023  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
