@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>Go vs Java 全方位对比 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="Go vs Java 全方位对比.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Go vs Java 全方位对比"/>
+<meta name="twitter:description" content="Go vs Java 全方位对比."/>
+
+  <meta property="og:title" content="Go vs Java 全方位对比" />
+<meta property="og:description" content="Go vs Java 全方位对比." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/govsjava/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-04-13T11:51:54+08:00" />
+<meta property="article:modified_time" content="2024-04-13T11:51:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/same-city-2/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/same-city-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/chaosblade-mem/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/go/" title="go">go</a>
+            
+            <a class="tag" href="/tags/java/" title="java">java</a>
+            
+          </div>
+          <h1>Go vs Java 全方位对比</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Sat, Apr 13, 2024
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="语言背景">语言背景<a class="anchorjs-link" href="#%e8%af%ad%e8%a8%80%e8%83%8c%e6%99%af"></a></h1><h2 id="golang">Golang<a class="anchorjs-link" href="#golang"></a></h2><h3 id="google-为什么要创建-go">Google 为什么要创建 Go<a class="anchorjs-link" href="#google-%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e5%88%9b%e5%bb%ba-go"></a></h3><ul>
+<li>计算机硬件技术更新频繁，性能提高很快。目前主流的编程语言发展明显落后于硬件，不能合理利用多核多 CPU 的优势提升软件系统性能。</li>
+<li>软件系统复杂度越来越高，维护成本越来越高，目前缺乏一个足够简洁高效的编程语言。</li>
+<li>
+<ul>
+<li>现有编程语言存在：风格不统一、计算能力不够、处理大并发不够好</li>
+</ul>
+</li>
+<li>企业运行维护很多 c/c++的项目，c/c++程序运行速度虽然很快，但是编译速度确很慢，同时还存在内存泄漏的一系列的困扰需要解决。</li>
+</ul>
+<p> </p>
+<h3 id="go-语言发展历史">Go 语言发展历史<a class="anchorjs-link" href="#go-%e8%af%ad%e8%a8%80%e5%8f%91%e5%b1%95%e5%8e%86%e5%8f%b2"></a></h3><ul>
+<li>2007 年，谷歌工程师 Rob Pike，Ken Thompson 和 Robert Griesemer 开始设计一门全新的语言，这是 Go 语言的最初原型。</li>
+<li>2009 年 11 月 10 日，Google 将 Go 语言以开放源代码的方式向全球发布。</li>
+<li>2015 年 8 月 19 日，Go1.5 版发布，本次更新中移除了”最后残余的 c 代码”</li>
+<li>2017 年 2 月 17 日，Go 语言 Go1.8 版发布。</li>
+<li>2017 年 8 月 24 日，Go 语言 Go1.9 版发布。</li>
+<li>2018 年 2 月 16 日，Go 语言 Go1.10 版发布。</li>
+<li>截止至今，Go语言最新版本v1.22.1版本发布。</li>
+</ul>
+<h2 id="java">Java<a class="anchorjs-link" href="#java"></a></h2><p>Java的发展历史可以追溯到20世纪90年代初，以下是Java的一些关键时刻和发展阶段：</p>
+<ul>
+<li>1991年：Oak 项目启动： James Gosling、Mike Sheridan和Patrick Naughton等Sun Microsystems的工程师开始了一个名为Oak的项目，旨在开发一种用于嵌入式系统的语言。</li>
+<li>1994年：Java 语言诞生： Oak 项目演变成了Java项目，该语言在Sun Microsystems的Java小组领导下于1995年5月正式发布。Java被设计成一种简单、面向对象、可移植、高性能的编程语言。</li>
+<li>1995年：公开发布： Java 1.0版本正式发布，引入了许多今天仍然存在的基本特性，例如Java虚拟机（JVM）和Applet技术。</li>
+<li>1997年：Java 1.1发布： 引入内部类、JavaBean、RMI（远程方法调用）等特性，增强了语言的功能。</li>
+<li>1998年：Java 2发布： Java 2（J2SE 1.2）发布，引入了Swing GUI工具包、集合框架、Java Naming and Directory Interface（JNDI）等重要特性。</li>
+<li>2000年：Java 2 Enterprise Edition（J2EE）发布： 针对企业级应用程序开发推出，引入了Servlet、JSP（JavaServer Pages）等技术。</li>
+<li>2004年：Java 5.0发布： 引入了重要的语言特性，如泛型、枚举、注解、自动装箱和拆箱、增强的for循环等。</li>
+<li>2006年：Java 6发布： 引入了Java虚拟机的更新、Scripting API、Java Compiler API等新特性。</li>
+<li>2011年：Java 7发布： 引入了重要的语言特性，如try-with-resources语句、钻石操作符、字符串在switch语句中的支持等。</li>
+<li>2014年：Java 8发布： 引入了Lambda表达式、Stream API、新的Date和Time API等重要特性，对语言和库进行了重大的升级。</li>
+<li>2017年：Java 9发布： 引入了模块化系统、改进的Javadoc、集合工厂方法等新特性。</li>
+<li>2018年：Java 10发布： 引入了局部变量类型推断、改进的垃圾回收器等新特性。</li>
+<li>2019年：Java 11发布： 引入了HTTP Client API、局部变量类型推断的升级、动态类文件常量等新特性。此版本标志着Oracle对长期支持（LTS）版本的承诺。</li>
+<li>2021年：Java 17发布： 作为一个长期支持（LTS）版本，引入了Sealed Classes、Pattern Matching for Switch、新的垃圾回收器等特性。</li>
+</ul>
+<p>Java的发展一直在持续进行，保持了与时俱进的态势。它在企业级应用、移动开发、大数据、云计算等领域都有着广泛的应用，成为世界上最受欢迎的编程语言之一。</p>
+<p> </p>
+<h1 id="语言特点">语言特点<a class="anchorjs-link" href="#%e8%af%ad%e8%a8%80%e7%89%b9%e7%82%b9"></a></h1><h2 id="go-语言的特点">Go 语言的特点<a class="anchorjs-link" href="#go-%e8%af%ad%e8%a8%80%e7%9a%84%e7%89%b9%e7%82%b9"></a></h2><ul>
+<li>Go 也是一种静态的编译型语言，语法和 C 相近，从 c 语言中继承了很多理念，包括表达式语法，控制结构，基础数据类型，调用参数传值，指针等等</li>
+<li>垃圾回收机制，内存自动回收</li>
+<li>天然并发【重要特点】
+<ul>
+<li>从语言层面支持并发，实现简单</li>
+<li>goroutine，轻量级线程，可实现大并发处理，高效利用多核。</li>
+<li>基于 CSP 并发模型（Communicating Sequential Processes,通讯顺序进程）实现</li>
+</ul>
+</li>
+<li>吸收了管道通信机制，形成 go 语言特有的管道 channel，通过管道 channel，可以实现不同的 goroute 之间的相互通信</li>
+<li>函数返回多个值</li>
+<li>新的创新：比如切片 slice，延时执行 defer 等</li>
+</ul>
+<p> </p>
+<h2 id="java-语言的特点">Java 语言的特点<a class="anchorjs-link" href="#java-%e8%af%ad%e8%a8%80%e7%9a%84%e7%89%b9%e7%82%b9"></a></h2><p>1.简单 </p>
+<p>Java 最初是为对家用电器进行集成控制而设计的一种语言，因此它必须简单明了。Java 语言的简单性主要体现在以下三个方面： </p>
+<ul>
+<li>Java 的风格类似于 C++，因而 C++程序员是非常熟悉的。从某种意义上讲，Java 语言是 C 及 C++语言的一个变种，因此，C++程序员可以很快就掌握 Java 编程技术。 </li>
+<li>Java 摒弃了 C++中容易引发程序错误的地方，如指针和内存管理。 </li>
+<li>Java 提供了丰富的类库。 </li>
+</ul>
+<p> 
+2.面向对象 </p>
+<p>面向对象可以说是 Java 最重要的特性。Java 语言的设计完全是面向对象的，它不支持类似 C 语言那样的面向过程的程序设计技术。Java 支持静态和动态风格的代码继承及重用。单从面向对象的特性来看，Java 类似于 Small Talk，但其它特性、尤其是适用于分布式计算环境的特性远远超越了 Small Talk。 </p>
+<p>3.可移植</p>
+<p>“一次编译，到处运行“的设计初衷，将代码编译为字节码后，即可运行在 JVM 虚拟机上。无视系统环境的差异。</p>
+<p>4.解释执行+即时编译</p>
+<p>在程序运行初始，是通过 JVM 中的解释器运行通过 javac(前端编译器)编译生成的 JVM 字节码,解释器会将我们的代码一句一句解释成机器可以识别的二进制代码来执行，可以认为是，解释一句，执行一句，效率较低
+ </p>
+<p>在程序运行期间，是通过及时编译器（JIT）把字节码转成机器码。JIT 及时编译在 JDK 1.7 以前主要是 HotSpot VM 的 C1、C2 编译器，在 JDK 1.7 开始后引入了分层编译，将 C1,C2 进行结合更好的提升程序的编译以及运行效率</p>
+<p>5.动态编译</p>
+<p>动态编译，简单来说就是在 Java 程序运行时编译源代码。</p>
+<p>从 JDK1.6 开始，引入了 Java 代码重写过的编译器接口，使得我们可以在运行时编译 Java 源代码，然后再通过类加载器将编译好的类加载进 JVM,这种在运行时编译代码的操作就叫做动态编译。</p>
+<p>6.多线程</p>
+<p>Java 语言是多线程的，这也是 Java 语言的一大特性，它必须由 Thread 类和它的子类来创建。Java 支持多个线程同时执行，并提供多线程之间的同步机制。</p>
+<p>7.垃圾回收</p>
+<p>java 语言支持多种垃圾回收机制，不需要开发者手动回收内存。 其中包括 CMS,G1,ZGC</p>
+<p>8.注解</p>
+<p>Java 注解（Annotation）又称 Java 标注，是 JDK5.0 引入的一种注释机制。Java 语言中的类、方法、变量、参数和包等都可以被标注。和 Javadoc 不同，Java 标注可以通过反射获取标注内容。在编译器生成类文件时，标注可以被嵌入到字节码中</p>
+<h1 id="典型项目">典型项目<a class="anchorjs-link" href="#%e5%85%b8%e5%9e%8b%e9%a1%b9%e7%9b%ae"></a></h1><h2 id="golang-1">Golang<a class="anchorjs-link" href="#golang-1"></a></h2><ul>
+<li>Kubernetes</li>
+</ul>
+<p><a href="https://github.com/kubernetes/kubernetes" target="_blank">Kubernetes</a> ，也称为 K8s，是一个用于跨多个主机管理容器化应用程序的开源系统。它为应用程序的部署、维护和扩展提供了基本机制</p>
+<ul>
+<li>Docker</li>
+</ul>
+<p><a href="https://github.com/moby/moby" target="_blank">Docker</a> 用于开发应用、交付（shipping）应用、运行应用。Docker 允许用户将基础设施中的应用单独分割出来，形成更小的颗粒（容器），从而提高交付软件的速度
+ </p>
+<ul>
+<li>Etcd</li>
+</ul>
+<p><a href="https://github.com/etcd-io/etcd" target="_blank">Etcd</a> 是分布式系统中最关键数据的分布式可靠键值存储系统</p>
+<ul>
+<li>Tidb</li>
+</ul>
+<p><a href="https://github.com/pingcap/tidb" target="_blank">Tidb</a> 是一个开源的分布式 SQL 数据库，支持混合事务和分析处理(HTAP)工作负载。它与 MySQL 兼容，具有水平可扩展性、强一致性和高可用性。</p>
+<h2 id="java-1">Java<a class="anchorjs-link" href="#java-1"></a></h2><ul>
+<li>Spring</li>
+</ul>
+<p><a href="https://github.com/spring-projects/spring-framework" target="_blank">Spring</a> 提供了 Java 编程语言以外的一切所需功能，用于为各种场景和体系结构创建企业应用程序</p>
+<ul>
+<li>Spring boot</li>
+</ul>
+<p><a href="https://github.com/spring-projects/spring-boot" target="_blank">Spring Boot</a> 帮助您以最小的麻烦创建 Spring 驱动的产品级应用程序和服务。它对 Spring 平台有自己的看法，以便新用户和现有用户可以快速获得所需的部分</p>
+<ul>
+<li>Elasticsearch</li>
+</ul>
+<p><a href="https://github.com/elastic/elasticsearch" target="_blank">Elasticsearch</a> 是位于 Elastic Stack 核心的分布式 RESTful 搜索和分析引擎</p>
+<ul>
+<li>Dubbo</li>
+</ul>
+<p><a href="https://github.com/apache/dubbo" target="_blank">Apache Dubbo</a> 是一个高性能、基于 java 的开源 RPC 框架</p>
+<h1 id="编码">编码<a class="anchorjs-link" href="#%e7%bc%96%e7%a0%81"></a></h1><h2 id="关键字">关键字<a class="anchorjs-link" href="#%e5%85%b3%e9%94%ae%e5%ad%97"></a></h2><p>golang有25个关键字</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_1.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<p>java有51个关键字</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="规约">规约<a class="anchorjs-link" href="#%e8%a7%84%e7%ba%a6"></a></h2><p>Golang 是一门严格的工程语言，主要体现在编码风格及可见域规则上，在 Java 中，允许多种编码风格共存，譬如以下两种方法声明，对于 Java 来说都是允许的：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">public</span> String <span style="color:#50fa7b">getString</span><span style="color:#ff79c6">(</span>Integer num<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>    <span style="color:#ff79c6">return</span> num<span style="color:#ff79c6">.</span><span style="color:#50fa7b">toString</span><span style="color:#ff79c6">();}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span><span style="color:#8be9fd;font-style:italic">public</span> String <span style="color:#50fa7b">getString</span><span style="color:#ff79c6">(</span>Integer num<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>    <span style="color:#ff79c6">return</span> num<span style="color:#ff79c6">.</span><span style="color:#50fa7b">toString</span><span style="color:#ff79c6">();</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span><span style="color:#ff79c6">}</span>
+</span></span></code></pre></div><p>在 Golang 中则是会严格检查换行风格，如果出现上面的情况会直接提示编译错误</p>
+<p> </p>
+<h2 id="变量声明">变量声明<a class="anchorjs-link" href="#%e5%8f%98%e9%87%8f%e5%a3%b0%e6%98%8e"></a></h2><p>在 Java 中，变量可以声明了却不使用，而 Golang 中声明的变量必须被使用，否则需要使用_来替代掉变量名，表明该变量不会被使用到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">getString</span>(num <span style="color:#8be9fd">int</span>) <span style="color:#8be9fd">string</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>	temp <span style="color:#ff79c6">:=</span> num 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>	_ <span style="color:#ff79c6">:=</span> num	
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>	<span style="color:#ff79c6">return</span> strconv.<span style="color:#50fa7b">Itoa</span>(num)}
+</span></span></code></pre></div><p>在 Golang 中支持两种变量声明方式，方式 2 会有编译器自动推导类型，更简洁一些</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>方式 <span style="color:#bd93f9">1</span>: <span style="color:#8be9fd;font-style:italic">var</span> a <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>方式 <span style="color:#bd93f9">2</span>：b <span style="color:#ff79c6">:=</span> <span style="color:#bd93f9">1</span>
+</span></span></code></pre></div><p> </p>
+<p>在 Golang 中对于基本类型,声明即初始化；对于引用类型，声明则初始化为 nil，在 Java 中，如果在方法内部声明一个变量但不初始化，在使用时会出现编译错误：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">public</span> <span style="color:#8be9fd">void</span> <span style="color:#50fa7b">solve</span><span style="color:#ff79c6">()</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>    <span style="color:#8be9fd">int</span> num<span style="color:#ff79c6">;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>    Object object<span style="color:#ff79c6">;</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>    System<span style="color:#ff79c6">.</span><span style="color:#50fa7b">out</span><span style="color:#ff79c6">.</span><span style="color:#50fa7b">println</span><span style="color:#ff79c6">(</span>num<span style="color:#ff79c6">);</span> 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>    System<span style="color:#ff79c6">.</span><span style="color:#50fa7b">out</span><span style="color:#ff79c6">.</span><span style="color:#50fa7b">println</span><span style="color:#ff79c6">(</span>object<span style="color:#ff79c6">);</span> 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span> <span style="color:#ff79c6">}</span>
+</span></span></code></pre></div><p> </p>
+<h2 id="可见域规则">可见域规则<a class="anchorjs-link" href="#%e5%8f%af%e8%a7%81%e5%9f%9f%e8%a7%84%e5%88%99"></a></h2><p>Java 对方法、变量及类的可见域规则是通过 private、protected、public 关键字来控制的，而 Golang 中控制可见域的方式只有一个，当字段首字母开头是大写时说明其是对外可见的、小写时只对包内成员可见。
+<figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_2.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="参数传递">参数传递<a class="anchorjs-link" href="#%e5%8f%82%e6%95%b0%e4%bc%a0%e9%80%92"></a></h2><p>在 java 中参数传递有两种，一种是引用传递，一种是值传递。而在 Golang 中一切均为值传递。</p>
+<p>例如数组在 Java 中是引用传递，当数组被当作参数传递到方法中，在方法内部对可以对数组中的内容修改。 在 Golang 中则会完全深度 copy 一份数组在方法中。</p>
+<p>但是在 Golang 中有指针的概念，可以通过传递参数的指针来进行修改参数原有内容,但这种也是值传递，本质上是将指针的地址进行了深度 copy。相当于两个指针同时指向了参数的真正内存地址</p>
+<p> </p>
+<h2 id="结构体声明及使用">结构体声明及使用<a class="anchorjs-link" href="#%e7%bb%93%e6%9e%84%e4%bd%93%e5%a3%b0%e6%98%8e%e5%8f%8a%e4%bd%bf%e7%94%a8"></a></h2><p>在 Golang 中区别与 Java 最显著的一点是，Golang 不存在“类”这个概念，组织数据实体的结构在 Golang 中被称为结构体。函数可以脱离“类”而存在，函数可以依赖于结构体来调用或者依赖于包名调用。</p>
+<p>Golang 中的结构体放弃了继承、实现等多态概念，结构体之间可使用组合来达到复用方法或者字段的效果。</p>
+<p>要声明一个结构体只需使用 type + struct 关键字即可：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">type</span> Person <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>	Name <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>	Age  <span style="color:#8be9fd">int</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>	id   <span style="color:#8be9fd">string</span>}
+</span></span></code></pre></div><p>要使用一个结构体也很简单，一般有以下几种方式去创建结构体：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>  personPoint <span style="color:#ff79c6">:=</span> <span style="color:#8be9fd;font-style:italic">new</span>(entity.Person) 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>	person1 <span style="color:#ff79c6">:=</span> entity.Person{} 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>	person2 <span style="color:#ff79c6">:=</span> entity.Person{ 
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>		Name: <span style="color:#f1fa8c">&#34;ARong&#34;</span>,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>		Age:  <span style="color:#bd93f9">21</span>,
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>	}
+</span></span></code></pre></div><h2 id="异常处理">异常处理<a class="anchorjs-link" href="#%e5%bc%82%e5%b8%b8%e5%a4%84%e7%90%86"></a></h2><p>在 java 中通过 try catch 对异常进行处理，在 go 语言里是没有 try catch 的概念的，因为 try catch 会消耗更多资源，而且不管从 try 里面哪个地方跳出来，都是对代码正常结构的一种破坏。</p>
+<p>所以 go 语言的设计思想中主张如果一个函数可能出现异常，那么应该把异常作为返回值，没有异常就返回 nil 每次调用可能出现异常的函数时，都应该主动进行检查，并做出反应。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">type</span> Student <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   name <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">main</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   name, err <span style="color:#ff79c6">:=</span> <span style="color:#50fa7b">GetName</span>(<span style="color:#ff79c6">&amp;</span>Student{})
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   <span style="color:#ff79c6">if</span> err <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">nil</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>      fmt.<span style="color:#50fa7b">Println</span>(<span style="color:#f1fa8c">&#34;error&#34;</span>, err)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>      <span style="color:#ff79c6">return</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>   fmt.<span style="color:#50fa7b">Println</span>(name)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">GetName</span>(s <span style="color:#ff79c6">*</span>Student) (<span style="color:#8be9fd">string</span>, <span style="color:#8be9fd">error</span>) {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   <span style="color:#ff79c6">if</span> s.name <span style="color:#ff79c6">==</span> <span style="color:#f1fa8c">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>      <span style="color:#ff79c6">return</span> <span style="color:#f1fa8c">&#34;&#34;</span>, errors.<span style="color:#50fa7b">New</span>(<span style="color:#f1fa8c">&#34;not found name&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18</span><span>   <span style="color:#ff79c6">return</span> <span style="color:#f1fa8c">&#34;Evan&#34;</span>, <span style="color:#ff79c6">nil</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19</span><span>}
+</span></span></code></pre></div><h2 id="重写与重载">重写与重载<a class="anchorjs-link" href="#%e9%87%8d%e5%86%99%e4%b8%8e%e9%87%8d%e8%bd%bd"></a></h2><p>在 Golang 中没有继承的概念，但是可以通过结构体组合的方式来达到“继承”的效果。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">type</span> Parent <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   name <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span><span style="color:#8be9fd;font-style:italic">type</span> Child <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   Parent
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>   name <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span><span style="color:#8be9fd;font-style:italic">func</span> (p <span style="color:#ff79c6">*</span>Parent) <span style="color:#50fa7b">Name</span>() <span style="color:#8be9fd">string</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   <span style="color:#ff79c6">return</span> p.name
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span><span style="color:#8be9fd;font-style:italic">func</span> (c <span style="color:#ff79c6">*</span>Child) <span style="color:#50fa7b">Name</span>() <span style="color:#8be9fd">string</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   <span style="color:#ff79c6">return</span> c.Parent.<span style="color:#50fa7b">Name</span>()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>}
+</span></span></code></pre></div><p> </p>
+<p>重载也不如 java 那样灵活，在 java 中重载的要求是：在一个类里面，方法名字相同，而参数不同。返回类型可以相同也可以不同。</p>
+<p>在 Golang 中可以通过接口来实现类似的效果，但是方法参数和返回值必须相同</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span><span style="color:#8be9fd;font-style:italic">type</span> Info <span style="color:#8be9fd;font-style:italic">interface</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>   <span style="color:#50fa7b">Name</span>() <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span><span style="color:#8be9fd;font-style:italic">type</span> A <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>   name <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span><span style="color:#8be9fd;font-style:italic">type</span> B <span style="color:#8be9fd;font-style:italic">struct</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>   firstName <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>   lastName  <span style="color:#8be9fd">string</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11</span><span><span style="color:#8be9fd;font-style:italic">func</span> (a <span style="color:#ff79c6">*</span>A) <span style="color:#50fa7b">Name</span>() <span style="color:#8be9fd">string</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12</span><span>   <span style="color:#ff79c6">return</span> a.name
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13</span><span>}
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14</span><span><span style="color:#8be9fd;font-style:italic">func</span> (b <span style="color:#ff79c6">*</span>B) <span style="color:#50fa7b">Name</span>() <span style="color:#8be9fd">string</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15</span><span>   <span style="color:#ff79c6">return</span> b.firstName <span style="color:#ff79c6">+</span> b.lastName
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16</span><span>}
+</span></span></code></pre></div><h2 id="多线程">多线程<a class="anchorjs-link" href="#%e5%a4%9a%e7%ba%bf%e7%a8%8b"></a></h2><p>在 java 中使用多线程，如果不考虑线程池的情况下，也需要继承 Thread 类或者实现 Runnable/Callable 接口，相对比较繁琐。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">public</span> <span style="color:#8be9fd;font-style:italic">class</span> <span style="color:#50fa7b">Task</span> <span style="color:#8be9fd;font-style:italic">extends</span> Thread <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>    @Override
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>    <span style="color:#8be9fd;font-style:italic">public</span> <span style="color:#8be9fd">void</span> <span style="color:#50fa7b">run</span><span style="color:#ff79c6">()</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>    <span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>    <span style="color:#8be9fd;font-style:italic">public</span> <span style="color:#8be9fd;font-style:italic">static</span> <span style="color:#8be9fd">void</span> <span style="color:#50fa7b">main</span><span style="color:#ff79c6">(</span>String<span style="color:#ff79c6">[]</span> args<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>        <span style="color:#ff79c6">new</span> Task<span style="color:#ff79c6">().</span><span style="color:#50fa7b">start</span><span style="color:#ff79c6">();</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>    <span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8</span><span><span style="color:#ff79c6">}</span>
+</span></span></code></pre></div><p> </p>
+<p>如果考虑资源问题（例如线程启动太多可能会造成 CPU 上下文频繁切换，性能反而降低。线程创建太多也会大量消耗内存），还需要考虑通过线程池来创建线程 ，更加繁琐。</p>
+<p>而在 Golang 中，golang 通过自身的 GMP 调度机制，用户只需要使用 Go 关键字创建 goroutine 协程即可，协程非常轻量，每个协程的初始大小在 2kb 左右。
+ </p>
+<p>协程(用户级线程)，这是对内核透明的，也就是系统并不知道有协程的存在，是完全由用户自己的程序进行调度的。在 golang 中通过 go 关键字开启协程，协程是属于用户态的减少了多线程情况下的 CPU 切换，在高并发场景下效果更好。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span><span style="color:#8be9fd;font-style:italic">func</span> <span style="color:#50fa7b">main</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2</span><span>   <span style="color:#ff79c6">for</span> i <span style="color:#ff79c6">:=</span> <span style="color:#bd93f9">0</span>; i &lt; <span style="color:#bd93f9">100</span>; i<span style="color:#ff79c6">++</span> {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3</span><span>      <span style="color:#ff79c6">go</span> <span style="color:#8be9fd;font-style:italic">func</span>() {
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4</span><span>         fmt.<span style="color:#50fa7b">Println</span>(<span style="color:#f1fa8c">&#34;你好&#34;</span>)
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5</span><span>      }()
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6</span><span>   }
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7</span><span>}  
+</span></span></code></pre></div><p> </p>
+<h1 id="垃圾回收">垃圾回收<a class="anchorjs-link" href="#%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6"></a></h1><p>在 java 和 golang 中都有垃圾回收机制。常见的垃圾回收算法如下：</p>
+<ol>
+<li>标记-清除：从根变量开始遍历所有引用的对象，标记引用的对象，没有被标记的进行回收。
+<ul>
+<li>优点：算法简单。</li>
+<li>缺点：需要 STW，效率不稳定，内存空间碎片化。</li>
+</ul>
+</li>
+<li>标记-复制：为了解决标记-清除算法面对大量可回收对象时执行效率低的问题，1969 年 Fenichel 提出了一种称为“半区复制”(Semispace Copying)的垃圾收集算法，它将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块的内存用完了，就将还存活着 的对象复制到另外一块上面，然后再把已使用过的内存空间一次清理掉 
+<ul>
+<li>优点：实现简单，运行高效，没有碎片</li>
+</ul>
+</li>
+</ol>
+<ul>
+<li>缺点：空间浪费严重，可用内存缩小为原来一半</li>
+</ul>
+<ol>
+<li>标记-整理：其中的标记过程仍然与“标记-清除”算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向内存空间一端移动，然后直接清理掉边界以外的内存。
+<ul>
+<li>优点：没有内存碎片</li>
+<li>缺点：部分场景不适合，如果进行回收时有大量存活对象，那么需要移动对象并更新所有引用，效率低下，因为这种操作需要 STW。</li>
+</ul>
+</li>
+</ol>
+<h2 id="java-2">Java<a class="anchorjs-link" href="#java-2"></a></h2><p>在 java 中有 Serial,ParNew,CMS,G1,ZGC 多种垃圾收集器，其实 CMS,G1,ZGC 通过分代垃圾回收思想。将“朝生夕死”的对象和“经久不衰”的对象按照不同的内存区域区分开来。</p>
+<p>其中 CMS 收集器是一款基于<strong>标记-清除</strong>算法实现的收集器（有碎片化问题），老年代则使用标记-整理算法实现。</p>
+<p>在 G1 收集器中 (1.7 引入，1.9 默认启用）,遵循分代收集理论设计，但是淡化了堆内存按照分代划分的概念，G1 不再坚持固定大小以及固定数量的分代区域划分，而是把连续的 Java 堆划分为多个大小相等的独立区域(Region)，每一个 Region 都可以根据需要，扮演新生代的 Eden 空间、Survivor 空间，或者老年代空间 ，而有了 Region 概念后，在回收过程中只需要把需要回收的 Region 中的存活对象复制到空 Region 中，然后清理掉整个旧 Region 空间。 相当于 G1 收集器是采用了<strong>标记-复制+清除</strong>的算法</p>
+<p>ZGC 收集器是一款基于 Region 内存布局的(与 G1 相同)，不设分代，使用了读屏障、染色指针和内存多重映射等技术来实现<strong>可并发的标记</strong>算法的，以低延迟为首要目标的一款垃圾收集器</p>
+<p> </p>
+<h2 id="golang-2">Golang<a class="anchorjs-link" href="#golang-2"></a></h2><p>在 Golang 中垃圾回收算法选择了标记-清除，通过“三色标记”算法进行标记，通过多层级的内存分配算法，尽可能解决内存碎片化的问题。 利用写屏障+辅助 GC 缩短 STW</p>
+<p>三色标记相关介绍文章： <a href="https://mp.weixin.qq.com/s/G7id1bNt9QpAvLe7tmRAGw" target="_blank">https://mp.weixin.qq.com/s/G7id1bNt9QpAvLe7tmRAGw</a></p>
+<h1 id="内存分配">内存分配<a class="anchorjs-link" href="#%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d"></a></h1><p>编程语言的内存分配器一般包含两种分配方法，一种是线性分配器（Sequential Allocator，Bump Allocator），另一种是空闲链表分配器（Free-List Allocator）</p>
+<h2 id="线性分配器"><strong>线性分配器</strong><a class="anchorjs-link" href="#%e7%ba%bf%e6%80%a7%e5%88%86%e9%85%8d%e5%99%a8"></a></h2><p>线性分配（Bump Allocator）是一种高效的内存分配方法，但是有较大的局限性。当我们使用线性分配器时，只需要在内存中维护一个指向内存特定位置的指针，如果用户程序向分配器申请内存，分配器只需要检查剩余的空闲内存、返回分配的内存区域并修改指针在内存中的位置，即移动下图中的指针：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_3.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>虽然线性分配器实现为它带来了较快的执行速度以及较低的实现复杂度，但是线性分配器无法在内存被释放时重用内存。如下图所示，如果已经分配的内存被回收，线性分配器无法重新利用红色的内存：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_4.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>因为线性分配器具有上述特性，所以需要与合适的垃圾回收算法配合使用，例如：标记压缩（Mark-Compact）、复制回收（Copying GC）和分代回收（Generational GC）等算法，它们可以通过拷贝的方式整理存活对象的碎片，将空闲内存定期合并，这样就能利用线性分配器的效率提升内存分配器的性能了。</p>
+<h2 id="空闲链表分配器"><strong>空闲链表分配器</strong><a class="anchorjs-link" href="#%e7%a9%ba%e9%97%b2%e9%93%be%e8%a1%a8%e5%88%86%e9%85%8d%e5%99%a8"></a></h2><p>空闲链表分配器（Free-List Allocator）可以重用已经被释放的内存，它在内部会维护一个类似链表的数据结构。当用户程序申请内存时，空闲链表分配器会依次遍历空闲的内存块，找到足够大的内存，然后申请新的资源并修改链表：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_5.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>因为不同的内存块通过指针构成了链表，所以使用这种方式的分配器可以重新利用回收的资源，但是因为分配内存时需要遍历链表，所以它的时间复杂度是 𝑂(𝑛)</p>
+<p>空闲链表分配器可以选择不同的策略在链表中的内存块中进行选择，最常见的是以下四种：</p>
+<ul>
+<li>首次适应（First-Fit）— 从链表头开始遍历，选择第一个大小大于申请内存的内存块；</li>
+<li>循环首次适应（Next-Fit）— 从上次遍历的结束位置开始遍历，选择第一个大小大于申请内存的内存块；</li>
+<li>最优适应（Best-Fit）— 从链表头遍历整个链表，选择最合适的内存块；</li>
+<li>隔离适应（Segregated-Fit）— 将内存分割成多个链表，每个链表中的内存块大小相同，申请内存时先找到满足条件的链表，再从链表中选择合适的内存块；</li>
+</ul>
+<p>上述四种策略的前三种就不过多介绍了，Go 语言使用的内存分配策略与第四种策略有些相似，我们通过下图了解该策略的原理：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_6.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>如上图所示，该策略会将内存分割成由 4、8、16、32 字节的内存块组成的链表，当我们向内存分配器申请 8 字节的内存时，它会在上图中找到满足条件的空闲内存块并返回。隔离适应的分配策略减少了需要遍历的内存块数量，提高了内存分配的效率。</p>
+<p> </p>
+<p>**java 使用的是线性分配器，golang 使用的是空闲链表分配器，从而一定程度上解决了内存碎片化问题
+**
+ </p>
+<p>golang内存分配相关文章：<a href="https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-memory-allocator/" target="_blank">https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-memory-allocator/</a></p>
+<h1 id="线程模型">线程模型<a class="anchorjs-link" href="#%e7%ba%bf%e7%a8%8b%e6%a8%a1%e5%9e%8b"></a></h1><h2 id="使用用户线程实现多对一模型-m1">使用用户线程实现（多对一模型 M:1)<a class="anchorjs-link" href="#%e4%bd%bf%e7%94%a8%e7%94%a8%e6%88%b7%e7%ba%bf%e7%a8%8b%e5%ae%9e%e7%8e%b0%e5%a4%9a%e5%af%b9%e4%b8%80%e6%a8%a1%e5%9e%8b-m1"></a></h2><p>广义上来讲，一个线程只要不是内核线程，都可以是用户线程（User Threa，UT）的一种。多个用户线程映射到一个内核线程，用户线程建立在用户空间的线程库上，用户线程的建立、同步、销毁和调度完全在用户态中完成，对内核透明。果程序实现得当，不需要切换内核态，因此操作可以是非常快且低消耗的，也能够支持规模更大的线程数量，部分高性能数据库中的多线程就是由用户线程实现的。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_7.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><strong>优点：</strong></p>
+<ol>
+<li>线程的上下文切换都发生在用户空间，避免了模态切换（mode switch），减少了性能的开销。</li>
+<li>用户线程的创建不受内核资源的限制，可以支持更大规模的线程数量。</li>
+</ol>
+<p><strong>缺点：</strong></p>
+<ol>
+<li>所有的线程基于一个内核调度实体即内核线程，这意味着只有一个处理器可以被利用，浪费了其它处理器资源，不支持并行，在多处理器环境下这是不能够被接受的，如果线程因为 I/O 操作陷入了内核态，内核态线程阻塞等待 I/O 数据，则所有的线程都将会被阻塞。</li>
+<li>增加了复杂度，所有的线程操作都需要用户程序自己处理，而且在用户空间要想自己实现 “阻塞的时候把线程映射到其他处理器上” 异常困难。</li>
+</ol>
+<p> </p>
+<h2 id="使用内核线程实现一对一模型-11">使用内核线程实现（一对一模型 1:1)<a class="anchorjs-link" href="#%e4%bd%bf%e7%94%a8%e5%86%85%e6%a0%b8%e7%ba%bf%e7%a8%8b%e5%ae%9e%e7%8e%b0%e4%b8%80%e5%af%b9%e4%b8%80%e6%a8%a1%e5%9e%8b-11"></a></h2><blockquote>
+<p>使用内核线程实现的方式被称为 1:1 实现。内核线程（Kernel Levvel Thread，<strong>KLT</strong>）就是直接由操作系统内核（Kernel，下称内核）支持的线程，内核通过操纵调度器（<strong>Scheduler</strong>）对线程进行调度，并负责将线程的任务映射到各个处理器上。其实程序一般不会直接使用内核线程，程序使用的是内核线程的一种高级接口——轻量级进程（Light Weight Process,LWP），轻量级进程就是我们通常意义上所讲的线程,轻量级进程也是属于用户线程。</p>
+</blockquote>
+<p>每个用户线程都映射到一个内核线程，每个线程都成为一个独立的调度单元，由内核调度器独立调度，一个线程的阻塞不会影响到其他线程，从而保障整个进程继续工作。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_8.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><strong>优点：</strong></p>
+<ol>
+<li>每个线程都成为一个独立的调度单元，使用内核提供的线程调度功能及处理器映射，可以完成线程的切换，并将线程的任务映射到其他处理器上，充分利用多核处理器的优势，实现真正的并行。</li>
+</ol>
+<p><strong>缺点：</strong></p>
+<ol>
+<li>每创建一个用户级线程都需要创建一个内核级线程与其对应，因此需要消耗一定的内核资源,而内核资源是有限的，所以能创建的线程数量也是有限的。</li>
+<li>模态切换频繁，各种线程操作，如创建、析构及同步，都需要进行系统调用，需要频繁的在用户态和内核态之间切换，开销大。</li>
+</ol>
+<h2 id="使用用户线程加轻量级进程混合实现多对多模型-mn">使用用户线程加轻量级进程混合实现（多对多模型 M:N）<a class="anchorjs-link" href="#%e4%bd%bf%e7%94%a8%e7%94%a8%e6%88%b7%e7%ba%bf%e7%a8%8b%e5%8a%a0%e8%bd%bb%e9%87%8f%e7%ba%a7%e8%bf%9b%e7%a8%8b%e6%b7%b7%e5%90%88%e5%ae%9e%e7%8e%b0%e5%a4%9a%e5%af%b9%e5%a4%9a%e6%a8%a1%e5%9e%8b-mn"></a></h2><p>内核线程和用户线程的数量比为 M : N，这种模型需要内核线程调度器和用户空间线程调度器相互操作，本质上是多个线程被映射到了多个内核线程。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/govsjava/img_9.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><strong>综合了前面两种模型的优点：</strong></p>
+<ol>
+<li>用户线程的创建、切换、析构及同步依然发生在用户空间，能创建数量更多的线程，支持更大规模的并发。</li>
+<li>大部分的线程上下文切换都发生在用户空间，减少了模态切换带来的开销。</li>
+<li>可以使用内核提供的线程调度功能及处理器映射，充分利用多核处理器的优势，实现真正的并行，并降低了整个进程被完全阻塞的风险</li>
+</ol>
+<p>java 使用 1:1 模型，而 golang 使用 M:N 模型</p>
+<p>java线程相关文章：<a href="https://blog.csdn.net/qq_35165000/article/details/107239532" target="_blank">https://blog.csdn.net/qq_35165000/article/details/107239532</a></p>
+<p>golang GMP调度相关文章：<a href="https://mp.weixin.qq.com/s/9MfIdUdBZmfqbUYT_xrB8A" target="_blank">https://mp.weixin.qq.com/s/9MfIdUdBZmfqbUYT_xrB8A</a></p>
+<h1 id="效率">效率<a class="anchorjs-link" href="#%e6%95%88%e7%8e%87"></a></h1><p>java-go-rust 性能对比： <a href="https://tonybai.com/2020/05/01/comparison-between-java-go-and-rust/" target="_blank">https://tonybai.com/2020/05/01/comparison-between-java-go-and-rust/</a></p>
+<p>web 框架性能测试榜单： <a href="https://www.techempower.com/benchmarks/#section=data-r21&amp;hw=ph&amp;test=composite" target="_blank">https://www.techempower.com/benchmarks/#section=data-r21&hw=ph&test=composite</a> (参考可以，适合的才是最好的)</p>
+<h1 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h1><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/same-city-2/" data-toggle="tooltip" data-placement="top" title="同城双活的必修课 - 落地经验与关键挑战解析">
+              Previous<br>
+              <span>同城双活的必修课 - 落地经验与关键挑战解析</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/cpu/">cpu</a>
+    
+    <a href="/tags/go/">go</a>
+    
+    <a href="/tags/java/">java</a>
+    
+    <a href="/tags/jvm/">jvm</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/mem/">mem</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/%E5%90%8C%E5%9F%8E%E5%8F%8C%E6%B4%BB/">同城双活</a>
+    
+    <a href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">字节码</a>
+    
+    <a href="/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/">容灾架构</a>
+    
+    <a href="/tags/%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB/">异地多活</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2024  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
