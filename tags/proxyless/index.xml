@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>proxyless on binbin0325</title>
+    <link>https://binbin0325.github.io/tags/proxyless/</link>
+    <description>Recent content in proxyless on binbin0325</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 13 Apr 2024 11:51:54 +0800</lastBuildDate><atom:link href="https://binbin0325.github.io/tags/proxyless/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>一文带你全方位了解 Service Mesh 核心技术</title>
+      <link>https://binbin0325.github.io/posts/servicemesh-1/</link>
+      <pubDate>Sat, 13 Apr 2024 11:51:54 +0800</pubDate>
+      
+      <guid>https://binbin0325.github.io/posts/servicemesh-1/</guid>
+      <description>Service Mesh 概述 Service Mesh 一词最早由开发 Linkerd 的 Buoyant 公司提出，并于 2016 年 9 月29 日第一次公开使用了这一术语。William Morgan，Buoyant CEO，对 Service</description>
+    </item>
+    
+  </channel>
+</rss>

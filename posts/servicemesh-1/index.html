@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>一文带你全方位了解 Service Mesh 核心技术 | binbin0325</title>
+  <meta name="author" content="Puppet">
+  <meta name="description" content="一文带你全方位了解 Service Mesh 核心技术.">
+  <meta name="keywords" content="blog,developer,personal">
+
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="一文带你全方位了解 Service Mesh 核心技术"/>
+<meta name="twitter:description" content="一文带你全方位了解 Service Mesh 核心技术."/>
+
+  <meta property="og:title" content="一文带你全方位了解 Service Mesh 核心技术" />
+<meta property="og:description" content="一文带你全方位了解 Service Mesh 核心技术." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://binbin0325.github.io/posts/servicemesh-1/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-04-13T11:51:54+08:00" />
+<meta property="article:modified_time" content="2024-04-13T11:51:54+08:00" />
+<meta property="og:see_also" content="https://binbin0325.github.io/posts/govsjava/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/same-city-2/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/same-city-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox-1/" /><meta property="og:see_also" content="https://binbin0325.github.io/posts/jvm-sandbox/" />
+
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="https://binbin0325.github.io/">binbin0325</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+          <li><a href="https://github.com/binbin0325" title="Github">Github</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/service-mesh/" title="service mesh">service mesh</a>
+            
+            <a class="tag" href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" title="微服务">微服务</a>
+            
+            <a class="tag" href="/tags/proxyless/" title="proxyless">proxyless</a>
+            
+          </div>
+          <h1>一文带你全方位了解 Service Mesh 核心技术</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by  Binbin Zhang 
+            on Sat, Apr 13, 2024
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              post-container">
+        <h1 id="service-mesh-概述">Service Mesh 概述<a class="anchorjs-link" href="#service-mesh-%e6%a6%82%e8%bf%b0"></a></h1><p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 一词最早由开发 Linkerd 的 Buoyant 公司提出，并于 2016 年 9 月29 日第一次公开使用了这一术语。William Morgan，Buoyant CEO，对 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 这一概念定义如下：</p>
+<blockquote>
+<p>A <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">service mesh</a> is a dedicated infrastructure layer for handling <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">service</a>-to-<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">service</a> communication. It’s responsible for the reliable delivery of requests through the complex topology of services that comprise a modern, cloud native application. In practice, the <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">service mesh</a> is typically implemented as an array of lightweight network proxies that are deployed alongside application code, without the application needing to be aware.</p>
+</blockquote>
+<p>翻译成中文如下：</p>
+<p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 是一个专门处理服务通讯的基础设施层。它的职责是在由云原生应用组成服务的复杂拓扑结构下进行可靠的请求传送。在实践中，它是一组和应用服务部署在一起的轻量级的网络代理，并且对应用服务透明。
+ </p>
+<p>以上这段话有四个关键点：</p>
+<ul>
+<li>本质：基础设施层。</li>
+<li>功能：请求分发。</li>
+<li>部署形式：网络代理。</li>
+<li>特点：透明。</li>
+</ul>
+<p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 也是一种服务治理技术，其核心能力是对流量进行控制。作为一个企业，如果你的微服务应用已经具有了非常完备的服务治理能力，那么你不一定非得引入 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a>。但是假设你的系统并不具有完善的治理功能，或者系统架构中的痛点正好可以被 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 所解决，那么使用 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 就是你的最佳选择。</p>
+<p>相对于基于公共库的服务治理产品，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 最大的特性就是对应用透明。你可以将你的微服务应用无缝的接入网格，而无需修改业务逻辑。目前 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 提供了以下重要的功能：</p>
+<ul>
+<li>为 HTTP、gRPC、WebSocket 和 TCP 流量自动负载均衡。</li>
+<li>通过丰富的路由规则、重试、故障转移和故障注入对流量行为进行细粒度控制。</li>
+<li>提供完善的可观察性方面的能力，包括对所有网格控制下的流量进行自动化度量、日志记录和追踪。</li>
+<li>提供身份验证和授权策略，在集群中实现安全的服务间通信。</li>
+</ul>
+<p> </p>
+<p>总而言之，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 的基础设施层主要分为两部分：控制平面与数据平面</p>
+<p> </p>
+<h1 id="控制面-istio">控制面-Istio<a class="anchorjs-link" href="#%e6%8e%a7%e5%88%b6%e9%9d%a2-istio"></a></h1><h2 id="概述">概述<a class="anchorjs-link" href="#%e6%a6%82%e8%bf%b0"></a></h2><p>Istio 是一个开源的服务网格（Service Mesh）平台，旨在解决微服务架构中服务间通信、安全性、可观察性等方面的挑战。以下是 Istio 的主要特点和功能：</p>
+<ol>
+<li>流量管理： Istio 提供了丰富的流量管理功能，包括负载均衡、故障恢复、流量控制、路由规则等，可以灵活地控制和管理服务之间的流量。</li>
+<li>安全性： Istio 提供了强大的安全功能，包括服务间的身份认证、流量加密、访问控制等，保障了服务之间通信的安全性和可信度。</li>
+<li>可观察性： Istio 提供了丰富的监控、跟踪和日志功能，可以实时监控服务的运行状态、性能指标和请求追踪等，帮助用户及时发现和解决问题。</li>
+<li>故障注入： Istio 支持在服务之间注入故障，模拟真实环境中的故障情况，以帮助开发者测试应用的弹性和容错性。</li>
+<li>自动化： Istio 提供了自动化配置和部署的功能，可以自动化地管理和调整服务之间的通信、安全策略等，简化了运维工作。</li>
+<li>多集群支持： Istio 支持跨多个 Kubernetes 集群的部署，并提供了统一的控制面板和管理界面，使得在多集群环境中管理服务更加简单和高效。</li>
+</ol>
+<p>总的来说，Istio 提供了一个强大、灵活和可扩展的服务网格平台，可以帮助开发者更好地构建、管理和保护微服务架构中的应用程序。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_1.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="架构">架构<a class="anchorjs-link" href="#%e6%9e%b6%e6%9e%84"></a></h2><p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 的架构由两部分组成，分别是数据平面和控制平面。
+ 
+<figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_2.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure>
+<strong>数据平面</strong></p>
+<p>由整个网格内的 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 代理组成，这些代理以 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 的形式和应用服务一起部署。每一个 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 会接管进入和离开服务的流量，并配合控制平面完成流量控制等方面的功能。可以把数据平面看做是网格内 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 代理的网络拓扑集合。</p>
+<p><strong>控制平面</strong></p>
+<p>控制和管理数据平面中的 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 代理，完成配置的分发、服务发现、和授权鉴权等功能。架构中拥有控制平面的优势在于，可以统一的对数据平面进行管理
+ </p>
+<h2 id="核心组件">核心组件<a class="anchorjs-link" href="#%e6%a0%b8%e5%bf%83%e7%bb%84%e4%bb%b6"></a></h2><h3 id="envoy">Envoy<a class="anchorjs-link" href="#envoy"></a></h3><p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 的数据平面默认使用 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 作为 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 代理，在未来也将支持使用 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#mosn" target="_blank">MOSN</a> 作为数据平面。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 将自己定位于高性能的 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 代理，也可以认为它是第一代 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-mesh" target="_blank">Service Mesh</a> 产品。可以说，流量控制相关的绝大部分功能都是由 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 提供的，这主要包括三个部分：</p>
+<ul>
+<li>路由、流量转移。</li>
+<li>弹性能力：如超时重试、熔断等。</li>
+<li>调试功能：如故障注入、流量镜像。</li>
+</ul>
+<h3 id="pilot">Pilot<a class="anchorjs-link" href="#pilot"></a></h3><p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 组件的主要功能是将路由规则等配置信息转换为 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 可以识别的信息，并下发给数据平面。可以把它简单的理解为是一个配置分发器（dispatcher），并辅助 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#sidecar" target="_blank">sidecar</a> 完成流量控制相关的功能。</p>
+<h3 id="citadel">Citadel<a class="anchorjs-link" href="#citadel"></a></h3><p>Citadel 是 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 中专门负责安全的组件，内置有身份和证书管理功能，可以实现较为强大的授权和认证等操作。</p>
+<h3 id="galley">Galley<a class="anchorjs-link" href="#galley"></a></h3><p>Galley 是 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 1.1 版本中新增加的组件，其目的是将 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 和底层平台（如 Kubernetes）进行解耦。它分担了原本 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 的一部分功能，主要负责配置的验证、提取和处理等功能。</p>
+<h3 id="mixer">Mixer<a class="anchorjs-link" href="#mixer"></a></h3><p>Mixer在Istio架构中不是必须的，Mixer是一个独立于平台的组件。Mixer跨服务网格执行访问控制和使用策略，并从特使代理和其他服务收集遥测数据。代理提取请求级属性，并将它们发送到Mixer进行评估。Mixer包括一个灵活的插件模型。该模型使Istio能够与各种主机环境和基础设施后端进行交互。因此，Istio从这些细节中抽象出Envoy代理和Istio管理的服务。</p>
+<ul>
+<li>为集群执行访问控制，哪些用户可以访问哪些服务，包括白名单检查、ACL检查等</li>
+<li>策略管理，比如某个服务最多只能接收多少流量请求</li>
+<li>遥测报告上报，比如从Envoy中收集数据[请求数据、使用时间、使用的协议等]，通过Adpater上报给Promethues、Heapster等</li>
+</ul>
+<h3 id="istiod">istiod<a class="anchorjs-link" href="#istiod"></a></h3><p>多模块部署复杂,运维成本高,1.5版本之后回归单体推出istiod，<a href="https://www.servicemesher.com/blog/istio-1-5-explanation/" target="_blank">https://www.servicemesher.com/blog/istio-1-5-explanation/</a></p>
+<p> </p>
+<h2 id="pilot-详情">Pilot 详情<a class="anchorjs-link" href="#pilot-%e8%af%a6%e6%83%85"></a></h2><p><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 内部的服务模型。在 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 控制面中，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 组件负责管理服务网格内部的服务和流量策略。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 将服务信息和路由策略转换为 xDS 接口的标准数据结构，下发到数据面的 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a>。但 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 自身并不负责网格中的服务注册，而是通过集成其他服务注册表来获取网格中管理的服务。除此以外，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 还支持通过 API 向网格中添加注册表之外的独立服务。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_3.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure>
+从上图中可以得知， <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 中管理的服务数据有两处数据来源：</p>
+<ul>
+<li><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service-registry" target="_blank">Service Registry</a>：来源于各个服务注册表，例如 Kubernetes 中的 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> 和 Consul 中注册的服务。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 通过特定的适配器连接这些服务注册表，由适配器将服务注册表中的私有服务模型转换为 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 内部支持的标准服务模型。</li>
+<li>Config Storage：来源于各种配置数据源中的独立服务，通过 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 定义的 <a href="https://istio.io/docs/reference/config/networking/service-entry/" target="_blank">ServiceEntry</a> 和 <a href="https://istio.io/docs/reference/config/networking/workload-entry/" target="_blank">WorkloadEntry</a> 资源类型加入到 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 的内部服务模型中。</li>
+<li>
+<ul>
+<li>腾讯搞了一个<a href="https://github.com/aeraki-mesh" target="_blank">aeraki-mesh</a>用于管理网格中7层流量，其中dubbo2istio和consul2istio就是用的这种实现方式，通过获取注册中心的服务和实例调用istio open api直接生成serviceEntry</li>
+</ul>
+</li>
+</ul>
+<p>Aeraki Mesh 是腾讯云在 Service Mesh 领域的一个开源项目，解决目前的服务网格项目只处理 了 HTTP/gRPC 协议，不支持其他开源及私有协议的痛点。</p>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>Aeraki Mesh 可以帮助你在服务网格中管理任何七层协议。目前已经支持了 Dubbo、Thrit、Redis、Kafka、ZooKeeper 等开源协议。你还可以使用 Aeraki Mesh 提供的 MetaProtocol 协议扩展框架来管理私有协议的七层流量。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_4.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<p> </p>
+<h1 id="数据面">数据面<a class="anchorjs-link" href="#%e6%95%b0%e6%8d%ae%e9%9d%a2"></a></h1><h2 id="envoy-1">Envoy<a class="anchorjs-link" href="#envoy-1"></a></h2><p>Envoy 是专为大型现代 SOA（面向服务架构）架构设计的 L7 代理和通信总线。该项目源于以下理念：</p>
+<blockquote>
+<p><em>网络对应用程序来说应该是透明的。当网络和应用程序出现问题时，应该很容易确定问题的根源。</em></p>
+</blockquote>
+<p>实际上，实现上述的目标是非常困难的。为了做到这一点，Envoy 提供了以下高级功能：</p>
+<p><strong>进程外架构：</strong> Envoy 是一个独立进程，设计为伴随每个应用程序服务运行。所有的 Envoy 形成一个透明的通信网格，每个应用程序发送消息到本地主机或从本地主机接收消息，但不知道网络拓扑。在服务间通信的场景下，进程外架构与传统的代码库方式相比，具有两大优点：</p>
+<ul>
+<li>Envoy 可以使用任何应用程序语言。Envoy 部署可以在 Java、C++、Go、PHP、Python 等之间形成一个网格。面向服务架构使用多个应用程序框架和语言的趋势越来越普遍。Envoy 透明地弥合了它们之间的差异。</li>
+<li>任何做过大型面向服务架构的人都知道，升级部署库可能会非常痛苦。Envoy可以透明地在整个基础架构上快速部署和升级。</li>
+</ul>
+<p><strong>现代 C++11 代码库：</strong> Envoy 是用 C++11 编写的。之所以选择（系统）原生代码是因为我们认为像 Envoy 这样的基础架构组件应该尽可能避让（资源争用）。由于在共享云环境中部署以及使用了非常有生产力但不是特别高效的语言（如 PHP、Python、Ruby、Scala 等），现代应用程序开发人员已经难以找出延迟的原因。原生代码通常提供了优秀的延迟属性，不会对已混乱的系统增加额外负担。与用 C 编写的其他原生代码代理的解决方案不同，C++11 具有出色的开发生产力和性能。</p>
+<p><strong>L3/L4 filter 架构：</strong> Envoy 的核心是一个 L3/L4 网络代理。可插入 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/network_filters.html#arch-overview-network-filters" target="_blank">filter</a> 链机制允许开发人员编写 filter 来执行不同的 TCP 代理任务并将其插入到主体服务中。现在已有很多用来支持各种任务的 filter，如原始 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/tcp_proxy.html#arch-overview-tcp-proxy" target="_blank">TCP 代理</a>、<a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_connection_management.html#arch-overview-http-conn-man" target="_blank">HTTP 代理</a>、<a href="https://www.servicemesher.com/envoy/intro/arch_overview/ssl.html#arch-overview-ssl-auth-filter" target="_blank">TLS 客户端证书认证</a>等。</p>
+<p><strong>HTTP L7 filter 架构：</strong> HTTP 是现代应用程序体系结构的关键组件，Envoy <a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_filters.html#arch-overview-http-filters" target="_blank">支持</a>额外的 HTTP L7 filter 层。可以将 HTTP filter 插入执行不同任务的 HTTP 连接管理子系统，例如<a href="https://www.servicemesher.com/envoy/configuration/http_filters/buffer_filter.html#config-http-filters-buffer" target="_blank">缓存</a>，<a href="https://www.servicemesher.com/envoy/intro/arch_overview/global_rate_limiting.html#arch-overview-rate-limit" target="_blank">速率限制</a>，<a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_routing.html#arch-overview-http-routing" target="_blank">路由/转发</a>，嗅探 Amazon 的 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/dynamo.html#arch-overview-dynamo" target="_blank">DynamoDB</a> 等等。</p>
+<p><strong>顶级 HTTP/2 支持：</strong> 当以 HTTP 模式运行时，Envoy 同时<a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_connection_management.html#arch-overview-http-protocols" target="_blank">支持</a> HTTP/1.1 和 HTTP/2。Envoy 可以作为 HTTP/1.1 和 HTTP/2 之间的双向透明代理。这意味着它可以桥接 HTTP/1.1 和 HTTP/2 客户端以及目标服务器的任意组合。建议配置所有服务之间的 Envoy 使用 HTTP/2 来创建持久连接的网格，以便可以复用请求和响应。随着协议的逐步淘汰，Envoy 将不支持 SPDY。</p>
+<p><strong>HTTP L7 路由：</strong> 当以 HTTP 模式运行时，Envoy 支持一种<a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_routing.html#arch-overview-http-routing" target="_blank">路由</a>子系统，能够根据路径、权限、内容类型、<a href="https://www.servicemesher.com/envoy/intro/arch_overview/runtime.html#arch-overview-runtime" target="_blank">运行时</a>及参数值等对请求进行路由和重定向。这项功能在将 Envoy 用作前端/边缘代理时非常有用，同时，在构建服务网格时也会使用此功能。</p>
+<p><strong>gRPC支持：</strong> <a href="http://www.grpc.io/" target="_blank">gRPC</a> 是一个来自 Google 的 RPC 框架，它使用 HTTP/2 作为底层多路复用传输协议。Envoy <a href="https://www.servicemesher.com/envoy/intro/arch_overview/grpc.html#arch-overview-grpc" target="_blank">支持</a>被 gRPC 请求和响应的作为路由和负载均衡底层的所有 HTTP/2 功能。这两个系统是非常互补的。</p>
+<p><strong>MongoDB L7 支持：</strong> <a href="https://www.mongodb.com/" target="_blank">MongoDB</a> 是一种用于现代 Web 应用程序的流行数据库。Envoy <a href="https://www.servicemesher.com/envoy/intro/arch_overview/mongo.html#arch-overview-mongo" target="_blank">支持</a>对 MongoDB 连接进行 L7 嗅探、统计和日志记录。</p>
+<p><strong>DynamoDB L7 支持</strong>：<a href="https://aws.amazon.com/dynamodb/" target="_blank">DynamoDB</a> 是亚马逊的托管键/值 NOSQL 数据存储。Envoy <a href="https://www.servicemesher.com/envoy/intro/arch_overview/dynamo.html#arch-overview-dynamo" target="_blank">支持</a>对 DynamoDB 连接进行 L7 嗅探和统计。</p>
+<p><strong>服务发现和动态配置：</strong> Envoy 可以选择使用<a href="https://www.servicemesher.com/envoy/intro/arch_overview/dynamic_configuration.html#arch-overview-dynamic-config" target="_blank">动态配置 API</a> 的分层集合实现集中管理。这些层为Envoy 提供了以下内容的动态更新：后端集群内的主机、后端集群本身、HTTP 路由、监听套接字和加密材料。对于更简单的部署，可以通过<a href="https://www.servicemesher.com/envoy/intro/arch_overview/service_discovery.html#arch-overview-service-discovery" target="_blank">DNS 解析</a>（甚至<a href="https://www.servicemesher.com/envoy/intro/arch_overview/service_discovery.html#arch-overview-service-discovery-types-sds" target="_blank">完全跳过</a>）发现后端主机，静态配置文件将替代更深的层。</p>
+<p><strong>健康检查：</strong> <a href="https://www.servicemesher.com/envoy/intro/arch_overview/service_discovery.html#arch-overview-service-discovery-eventually-consistent" target="_blank">推荐</a>使用将服务发现视为最终一致的过程的方式来建立 Envoy 网格。Envoy 包含了一个<a href="https://www.servicemesher.com/envoy/intro/arch_overview/health_checking.html#arch-overview-health-checking" target="_blank">健康检查</a>子系统，可以选择对上游服务集群执行主动健康检查。然后，Envoy 联合使用服务发现和健康检查信息来确定健康的负载均衡目标。Envoy 还通过<a href="https://www.servicemesher.com/envoy/intro/arch_overview/outlier.html#arch-overview-outlier-detection" target="_blank">异常检测</a>子系统支持被动健康检查。</p>
+<p><strong>高级负载均衡：</strong> <a href="https://www.servicemesher.com/envoy/intro/arch_overview/load_balancing.html#arch-overview-load-balancing" target="_blank">负载均衡</a>是分布式系统中不同组件之间的一个复杂问题。由于 Envoy 是一个独立代理而不是库，因此可以独立实现高级负载均衡以供任何应用程序访问。目前，Envoy 支持<a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_routing.html#arch-overview-http-routing-retry" target="_blank">自动重试</a> 、<a href="https://www.servicemesher.com/envoy/intro/arch_overview/circuit_breaking.html#arch-overview-circuit-break" target="_blank">熔断</a>、通过外部速率限制服务的<a href="https://www.servicemesher.com/envoy/intro/arch_overview/global_rate_limiting.html#arch-overview-rate-limit" target="_blank">全局速率限制</a>、<a href="https://www.envoyproxy.io/docs/envoy/latest/api-v1/route_config/route#config-http-conn-man-route-table-route-shadow" target="_blank">请求映射</a>和<a href="https://www.servicemesher.com/envoy/intro/arch_overview/outlier.html#arch-overview-outlier-detection" target="_blank">异常点检测</a>。未来还计划支持请求竞争。</p>
+<p><strong>前端/边缘代理支持：</strong> 尽管 Envoy 主要设计用来作为一个服务间的通信系统，但在系统边缘使用相同的软件也是大有好处的（可观察性、管理、相同的服务发现和负载均衡算法等）。Envoy 包含足够多的功能，使其可作为大多数现代 Web 应用程序的边缘代理。这包括 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/ssl.html#arch-overview-ssl" target="_blank">TLS</a> 终止、HTTP/1.1 和 HTTP/2 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_connection_management.html#arch-overview-http-protocols" target="_blank">支持</a>，以及 HTTP L7 <a href="https://www.servicemesher.com/envoy/intro/arch_overview/http_routing.html#arch-overview-http-routing" target="_blank">路由</a>。</p>
+<p><strong>最佳的可观察性：</strong> 如上所述，Envoy 的主要目标是使网络透明。但是，问题在网络层面和应用层面都可能会出现。Envoy 包含对所有子系统强大的<a href="https://www.servicemesher.com/envoy/intro/arch_overview/statistics.html#arch-overview-statistics" target="_blank">统计</a>功能支持。目前支持 <a href="https://github.com/etsy/statsd" target="_blank">statsd</a>（和兼容的提供程序）作为统计信息接收器，但是插入不同的接收器并不困难。统计信息也可以通过<a href="https://www.servicemesher.com/envoy/operations/admin.html#operations-admin-interface" target="_blank">管理</a>端口查看。Envoy 还通过第三方提供商支持分布式<a href="https://www.servicemesher.com/envoy/intro/arch_overview/tracing.html#arch-overview-tracing" target="_blank">追踪</a>。</p>
+<p> </p>
+<h2 id="mosn">Mosn<a class="anchorjs-link" href="#mosn"></a></h2><p>MOSN（Modular Open Smart Network）是一款主要使用 Go 语言开发的云原生网络代理平台，由蚂蚁集团开源并经过双 11 大促几十万容器的生产级验证。 MOSN 为服务提供多协议、模块化、智能化、安全的代理能力，融合了大量云原生通用组件，同时也可以集成 Envoy 作为网络库，具备高性能、易扩展的特点。 MOSN 可以和 Istio 集成构建 Service Mesh，也可以作为独立的四、七层负载均衡，API Gateway、云原生 Ingress 等使用。</p>
+<p><a href="https://mosn.io/docs/overview/" target="_blank">https://mosn.io/docs/overview/</a></p>
+<h2 id="核心能力-sidecar-流量劫持">核心能力 Sidecar 流量劫持<a class="anchorjs-link" href="#%e6%a0%b8%e5%bf%83%e8%83%bd%e5%8a%9b-sidecar-%e6%b5%81%e9%87%8f%e5%8a%ab%e6%8c%81"></a></h2><h3 id="iptables-流量劫持方案">iptables-流量劫持方案<a class="anchorjs-link" href="#iptables-%e6%b5%81%e9%87%8f%e5%8a%ab%e6%8c%81%e6%96%b9%e6%a1%88"></a></h3><p>首先看一下当前社区使用的基于 iptables 的流量劫持方案，下图是一个 Pod 的创建过程，sidecar injector 会向 Pod 中注入两个容器，istio-init 和 istio-proxy</p>
+<ul>
+<li>istio-init 是一个 init container，负责创建流量劫持相关的 iptables 规则，在创建完成后会退出</li>
+<li>istio-proxy 中运行着 envoy，负责代理 Pod 的网络流量，iptables 会将请求劫持到 istio-proxy 处理</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_5.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>下图展示了 iptables 完成流量劫持的整个过程</p>
+<ul>
+<li>Inbound iptables 将入流量重定向到 15006 端口，也就是 envoy 的 VirtualInboundListener，envoy 会根据请求的原始目的地址转发到应用程序的指定端口</li>
+<li>Outbound iptables 将出流量重定向到 15001 端口，也就是 envoy 的 VirtualOutboundListener，envoy 会根据请求的原始目的地址以及 Host URL 等信息路由到指定后端</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_6.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p> </p>
+<h3 id="使用-iptables-做流量劫持时存在的问题">使用 iptables 做流量劫持时存在的问题<a class="anchorjs-link" href="#%e4%bd%bf%e7%94%a8-iptables-%e5%81%9a%e6%b5%81%e9%87%8f%e5%8a%ab%e6%8c%81%e6%97%b6%e5%ad%98%e5%9c%a8%e7%9a%84%e9%97%ae%e9%a2%98"></a></h3><p>目前 Istio 使用 iptables 实现透明劫持，主要存在以下三个问题：</p>
+<ol>
+<li>需要借助于 conntrack 模块实现连接跟踪，在连接数较多的情况下，会造成较大的消耗，同时可能会造成 track 表满的情况，为了避免这个问题，业内有关闭 conntrack 的做法。</li>
+<li>
+<ol>
+<li>conntrack 是 Linux 下的一个内核模块，这个名字是 connection track 的缩写， 顾名思义，这个模块就是用来做连接跟踪的。 然而这里的链接需要同 TCP 协议中的连接区分开来， 它指的是通信的两个端点之间用于传输数据的连接， 因此它不止可以用来跟踪 TCP 的连接，还可以跟踪 UDP、ICMP 协议保报文这样”连接“。 conntrack 维护一张连接表——conntrack table。 通过 netfilter 的 hook 机制，conntrack 模块可以检查系统中进出的每个网络数据包。 当发现一条新的连接建立时，比如检查到一个 TCP SYNC 数据包， conntrack 就在 conntrack table 中添加一条连接记录</li>
+</ol>
+</li>
+<li>iptables 属于常用模块，全局生效，不能显式的禁止相关联的修改，可管控性比较差。</li>
+<li>iptables 重定向流量本质上是通过 loopback 交换数据，outbond 流量将两次穿越协议栈，在大并发场景下会损失转发性能。</li>
+</ol>
+<p>上述几个问题并非在所有场景中都存在，比方说某些场景下，连接数并不多，且 NAT 表未被使用到的情况下，iptables 是一个满足要求的简单方案。为了适配更加广泛的场景，透明劫持需要解决上述三个问题。</p>
+<p> </p>
+<h3 id="透明劫持方案">透明劫持方案<a class="anchorjs-link" href="#%e9%80%8f%e6%98%8e%e5%8a%ab%e6%8c%81%e6%96%b9%e6%a1%88"></a></h3><p><strong>使用 tproxy 处理 inbound 流量</strong></p>
+<p>tproxy 可以用于 inbound 流量的重定向，且无需改变报文中的目的 IP/端口，不需要执行连接跟踪，不会出现 conntrack 模块创建大量连接的问题。受限于内核版本，tproxy 应用于 outbound 存在一定缺陷。目前 Istio 支持通过 tproxy 处理 inbound 流量。</p>
+<p><strong>使用 hook connect 处理 outbound 流量</strong></p>
+<p>为了适配更多应用场景，outbound 方向通过 hook connect 来实现，实现原理如下：</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_7.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>无论采用哪种透明劫持方案，均需要解决获取真实目的 IP/端口的问题，使用 iptables 方案通过 getsockopt 方式获取，tproxy 可以直接读取目的地址，通过修改调用接口，hook connect 方案读取方式类似于tproxy。</p>
+<p>实现透明劫持后，在内核版本满足要求（4.16以上）的前提下，通过 sockmap 可以缩短报文穿越路径，进而改善 outbound 方向的转发性能。</p>
+<p>参考链接：<a href="https://jimmysong.io/blog/sidecar-injection-iptables-and-traffic-routing/" target="_blank">https://jimmysong.io/blog/sidecar-injection-iptables-and-traffic-routing/</a></p>
+<h3 id="ebpf-实现流量劫持">eBPF 实现流量劫持<a class="anchorjs-link" href="#ebpf-%e5%ae%9e%e7%8e%b0%e6%b5%81%e9%87%8f%e5%8a%ab%e6%8c%81"></a></h3><p>参考文档：<a href="https://istio.io/latest/zh/blog/2022/merbridge/" target="_blank">https://istio.io/latest/zh/blog/2022/merbridge/</a></p>
+<h3 id="mosn流量接管">MOSN流量接管<a class="anchorjs-link" href="#mosn%e6%b5%81%e9%87%8f%e6%8e%a5%e7%ae%a1"></a></h3><p>区别于 Istio 社区的 <a href="https://jimmysong.io/istio-handbook/concepts/sidecar-injection-deep-dive.html" target="_blank">iptables 流量劫持方案</a>，MOSN 使用的流量接管的方案如下：</p>
+<ol>
+<li>假设服务端运行在 1.2.3.4 这台机器上，监听 20880 端口，首先服务端会向自己的 Sidecar 发起服务注册请求，告知 Sidecar 需要注册的服务以及 IP + 端口（1.2.3.4:20880）</li>
+<li>服务端的 Sidecar 会向服务注册中心（如 SOFA Registry）发起服务注册请求，告知需要注册的服务以及 IP + 端口，不过这里需要注意的是注册上去的并不是业务应用的端口（20880），而是 Sidecar 自己监听的一个端口（例如：20881）</li>
+<li>调用端向自己的 Sidecar 发起服务订阅请求，告知需要订阅的服务信息</li>
+<li>调用端的 Sidecar 向调用端推送服务地址，这里需要注意的是推送的 IP 是本机，端口是调用端的 Sidecar 监听的端口（例如 20882）</li>
+<li>调用端的 Sidecar 会向服务注册中心（如 SOFA Registry）发起服务订阅请求，告知需要订阅的服务信息；</li>
+<li>服务注册中心（如 SOFA Registry）向调用端的 Sidecar 推送服务地址（1.2.3.4:20881）</li>
+</ol>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_8.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure>
+通过在服务注册过程中把服务端地址替换成本机监听端口实现了轻量级的“流量劫持”，在存在注册中心，且调用端和服务端同时使用特定SDK的场景中可以很好的工作，如果不满足这两个条件，则无法流量劫持。为了降低对于应用程序的要求，需要引入透明劫持(iptables)</p>
+<p> </p>
+<p>总结来看，如果应用程序通过注册中心发布/订阅服务时，可以结合注册中心劫持流量；在需要用到透明劫持的场景，如果性能压力不大，使用 iptables redirect 即可，大并发压力下使用 tproxy 与hook connect 结合的方案。</p>
+<h1 id="控制面和数据面---通信协议-xds">控制面和数据面 - 通信协议 XDS<a class="anchorjs-link" href="#%e6%8e%a7%e5%88%b6%e9%9d%a2%e5%92%8c%e6%95%b0%e6%8d%ae%e9%9d%a2---%e9%80%9a%e4%bf%a1%e5%8d%8f%e8%ae%ae-xds"></a></h1><p>xDS 协议是 “X Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a>” 的简写，这里的 “X” 表示它不是指具体的某个协议，是一组基于不同数据源的服务发现协议的总称，包括 CDS、LDS、EDS、RDS 和 SDS 等。客户端可以通过多种方式获取数据资源，比如监听指定文件、订阅 gRPC stream 以及轮询相应的 REST API 等。</p>
+<p>在 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#istio" target="_blank">Istio</a> 架构中，基于 xDS 协议提供了标准的控制面规范，并以此向数据面传递服务信息和治理规则。在 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 中，xDS 被称为数据平面 API，并且担任控制平面 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 和数据平面 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 的通信协议，同时这些 API 在特定场景里也可以被其他代理所使用。目前 xDS 主要有两个版本 v2 和 v3，其中 v2 版本将于 2020 年底停止使用。</p>
+<h2 id="xds-协议简介">XDS 协议简介<a class="anchorjs-link" href="#xds-%e5%8d%8f%e8%ae%ae%e7%ae%80%e4%bb%8b"></a></h2><p>在 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 和 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 通信的场景中，xDS 协议是基于 gRPC 实现的传输协议，即 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 通过 gRPC streaming 订阅 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 的资源配置。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 借助 ADS 对 API 更新推送排序的能力，按照 CDS-EDS-LDS-RDS 的顺序串行分发配置。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_9.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<p>图中的 ADS 将 xDS 所有的协议都聚合到一起，即上文提到的 CDS、EDS、LDS 和 RDS 等，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 通过这些 API 可以动态地从 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#pilot" target="_blank">Pilot</a> 获取对 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a>（集群）、Endpoint（集群成员）、Listener（监听器）和 Route（路由）等资源的配置。下表整理了主要的 xDS API：</p>
+<table>
+<thead>
+<tr>
+<th>服务简写</th>
+<th>全称</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LDS</td>
+<td>Listener Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>监听器发现服务</td>
+</tr>
+<tr>
+<td>RDS</td>
+<td>Route Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>路由发现服务</td>
+</tr>
+<tr>
+<td>CDS</td>
+<td><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>集群发现服务</td>
+</tr>
+<tr>
+<td>EDS</td>
+<td>Endpoint Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>集群成员发现服务</td>
+</tr>
+<tr>
+<td>SDS</td>
+<td><a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>v1 时的集群成员发现服务，后改名为 EDS</td>
+</tr>
+<tr>
+<td>ADS</td>
+<td>Aggregated Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>聚合发现服务</td>
+</tr>
+<tr>
+<td>HDS</td>
+<td>Health Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>健康度发现服务</td>
+</tr>
+<tr>
+<td>SDS</td>
+<td>Secret Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>密钥发现服务</td>
+</tr>
+<tr>
+<td>MS</td>
+<td>Metric <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>指标发现服务</td>
+</tr>
+<tr>
+<td>RLS</td>
+<td>Rate Limit <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a></td>
+<td>限流发现服务</td>
+</tr>
+<tr>
+<td>xDS</td>
+<td> </td>
+<td>以上各种 API 的统称</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<h2 id="cds">CDS<a class="anchorjs-link" href="#cds"></a></h2><p>CDS 是 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> 的缩写，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 使用它在进行路由的时候发现上游 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a>。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 通常会优雅地添加、更新和删除 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a>。有了 CDS 协议，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 在初次启动的时候不一定要感知拓扑里所有的上游 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a>。在做路由 HTTP 请求的时候通过在 HTTP 请求头里添加 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> 信息实现请求转发。</p>
+<p>尽管可以在不使用 EDS（Endpoint Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a>）的情况下通过指定静态集群的方式使用 CDS（<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a>），但仍然推荐通过 EDS API 实现。因为从内部实现来说，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> 定义会被优雅地更新，也就是说所有已建立的连接池都必须排空然后重连。使用 EDS 就可以避免这个问题，当通过 EDS 协议添加或移除 hosts 时，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> 里现有的 hosts 不会受此影响。</p>
+<h2 id="eds">EDS<a class="anchorjs-link" href="#eds"></a></h2><p>EDS 即 Endpoint Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> 的缩写。在 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 术语中，Endpoint 即 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#cluster" target="_blank">Cluster</a> 的成员。<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 通过 EDS API 可以更加智能地动态获取上游 Endpoint。使用 EDS 作为首选服务发现的原因有二：</p>
+<ul>
+<li>EDS 可以突破 DNS 解析的最大记录数限制，同时可以使用负载均衡和路由中的很多信息，因而可以做出更加智能的负载均衡策略。</li>
+<li>Endpoint 配置包含灰度状态、负载权重和可用域等 hosts 信息，可用于服务网格负载均衡和实现信息统计等。</li>
+</ul>
+<h2 id="lds">LDS<a class="anchorjs-link" href="#lds"></a></h2><p>LDS 即 Listener Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> 的缩写。基于此，<a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 可以在运行时发现所有的 Listener，包括 L3 和 L4 filter 等所有的 filter 栈，并由此执行各种代理工作，如认证、TCP 代理和 HTTP 代理等。添加 LDS 使得 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 的任何配置都可以动态执行，只有发生一些非常罕见的变更（管理员、追踪驱动等）、证书轮转或二进制更新时才会使用热更新。</p>
+<h2 id="rds">RDS<a class="anchorjs-link" href="#rds"></a></h2><p>RDS 即 Router Discovery <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#service" target="_blank">Service</a> 的缩写，用于 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 在运行时为 HTTP 连接管理 filter 获取完整的路由配置，比如 HTTP 头部修改等。并且路由配置会被优雅地写入而无需影响已有的请求。当 RDS 和 EDS、CDS 共同使用时，可以帮助构建一个复杂的路由拓扑蓝绿发布等。</p>
+<h2 id="ads">ADS<a class="anchorjs-link" href="#ads"></a></h2><p>EDS，CDS 等每个独立的服务都对应了不同的 gRPC 服务名称。对于需要控制不同类型资源抵达 <a href="https://www.servicemesher.com/istio-handbook/GLOSSARY.html#envoy" target="_blank">Envoy</a> 顺序的需求，可以使用聚合发现服务，即 Aggregated xDS，它可以通过单一的 gRPC 服务流支持所有的资源类型，借助于有序的配置分发，从而解决资源更新顺序的问题。</p>
+<p> </p>
+<p>xds server demo:<a href="https://github.com/binbin0325/grpc-xds-example" target="_blank">https://github.com/binbin0325/grpc-xds-example</a></p>
+<p> </p>
+<h1 id="service-mesh落地">Service Mesh落地<a class="anchorjs-link" href="#service-mesh%e8%90%bd%e5%9c%b0"></a></h1><p>k8s天生自带“服务注册”能力，但没有服务治理能力。istio就是服务治理技术。</p>
+<p>但是大多数公司的演进过程是从虚拟机-&gt;k8s-&gt;istio，在k8s阶段的时候服务治理的能力或多或少已经建设了，可能是围绕外部注册中心也有可能是围绕k8s service。所以直接推翻已经建设的服务治理体系去完全落地istio实施难度太大，况且istio还并不是那么完全成熟。</p>
+<p>落地服务网格目前主要以下几种：</p>
+<p>1:完全all in istio，适合于没有历史背景，完全新建/重建微服务框架和服务治理能力的公司</p>
+<p>2:以istio pilot为核心，对接自己公司的注册中心和服务治理平台，实现自己的控制面，数据面用envoy或者mosn</p>
+<p>3:抛弃istio 对接xds 协议，实现自己公司的控制面</p>
+<p>4:使用istio但自研sidecar，实现自己公司的数据面</p>
+<h2 id="字节">字节<a class="anchorjs-link" href="#%e5%ad%97%e8%8a%82"></a></h2><p><a href="https://juejin.cn/post/6969012264342913038" target="_blank">https://juejin.cn/post/6969012264342913038</a></p>
+<h2 id="百度">百度<a class="anchorjs-link" href="#%e7%99%be%e5%ba%a6"></a></h2><p><a href="https://juejin.cn/post/6972048300232949797" target="_blank">https://juejin.cn/post/6972048300232949797</a></p>
+<h2 id="阿里">阿里<a class="anchorjs-link" href="#%e9%98%bf%e9%87%8c"></a></h2><p><a href="http://www.dockone.io/article/9536" target="_blank">http://www.dockone.io/article/9536</a></p>
+<h2 id="腾讯">腾讯<a class="anchorjs-link" href="#%e8%85%be%e8%ae%af"></a></h2><p><a href="https://www.infoq.cn/article/id2w4pefjqbusjhmd8jt" target="_blank">https://www.infoq.cn/article/id2w4pefjqbusjhmd8jt</a></p>
+<p>不是所有的应用都需要 Service Mesh 架构:<a href="https://www.infoq.cn/article/ex3rr5jcbyxocx7mwjbu" target="_blank">https://www.infoq.cn/article/ex3rr5jcbyxocx7mwjbu</a></p>
+<h1 id="proxy-和-proxyless-对比">Proxy 和 Proxyless 对比<a class="anchorjs-link" href="#proxy-%e5%92%8c-proxyless-%e5%af%b9%e6%af%94"></a></h1><h2 id="proxy">Proxy<a class="anchorjs-link" href="#proxy"></a></h2><p>Service Mesh 可以解决微服务场景下的众多问题，随着集群规模的扩大与业务复杂度的增长，基于原生 k8s 的容器编排方案将会难以应付，开发人员不得不面对巨大的服务治理挑战。而 Service Mesh 很好地解决了这一问题，它将服务治理需求封装在了控制平面与代理中，业务开发人员只需要关注于业务逻辑。在应用部署之后，只需要运维人员通过修改配置，即可实现例如故障恢复、负载均衡、灰度发布等功能，这极大地提高了研发和迭代效率。</p>
+<p> </p>
+<p>Istio 的 sidecar 通过容器注入的形式伴随业务应用进程的整个生命周期，对于业务应用是毫无侵入的，这解决了业务应用可迁移、多语言、基础架构耦合等问题。但这也带来了高资源消耗、请求时延增长的问题。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_10.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="proxyless">Proxyless<a class="anchorjs-link" href="#proxyless"></a></h2><p>无代理服务网格，是2018年谷歌提出的一个新的概念，Isito、gRPC、brpc,dubbo go 等开源社区都在这一方向进行了探索和实践。无代理服务网格框架以 SDK 的形式被业务应用引入，负责服务之间的通信、治理。来自控制平面的配置直接下发至服务框架，由服务框架代替上述 sidecar 的功能。</p>
+<p>优点：</p>
+<ul>
+<li>性能：无代理模式的网络调用为点对点的直接通信，网络时延会比代理模式小很多。</li>
+<li>稳定性：proxyless 的模式是单进程，拓扑简单，便于调试，稳定性高。</li>
+<li>框架集成：市面上已有众多 sdk 模式的服务框架，切换至 mesh 后便于复用框架已有能力</li>
+<li>资源消耗：没有 sidecar，资源消耗低。</li>
+</ul>
+<p>缺点:</p>
+<ul>
+<li>语言绑定：需要开发多种语言的 sdk</li>
+<li>可迁移性低：无法通过切换 sidecar 的形式来无侵入地升级基础设施。</li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_11.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="对比">对比<a class="anchorjs-link" href="#%e5%af%b9%e6%af%94"></a></h2><p><figure>
+  <a class="paragraph-image">
+    <img data-src="/servicemesh/img_12.png" data-action="zoom" alt="image.png"  class="lazyload">
+  </a>
+  
+</figure></p>
+<h2 id="相关资料">相关资料<a class="anchorjs-link" href="#%e7%9b%b8%e5%85%b3%e8%b5%84%e6%96%99"></a></h2><p>Proxyless Service Mesh在百度的实践与思考: <a href="https://new.qq.com/omn/20211211/20211211A02HJG00.html" target="_blank">https://new.qq.com/omn/20211211/20211211A02HJG00.html</a></p>
+<p>proxyless-grpc: <a href="https://istio.io/latest/blog/2021/proxyless-grpc/" target="_blank">https://istio.io/latest/blog/2021/proxyless-grpc/</a></p>
+<p>proxyless-opensergo: <a href="https://opensergo.io/zh-cn/" target="_blank">https://opensergo.io/zh-cn/</a></p>
+<h1 id="参考">参考<a class="anchorjs-link" href="#%e5%8f%82%e8%80%83"></a></h1><blockquote>
+<p>本文参考很多文章以及官网资料进行汇总整理，如有侵权请随时联系.</p>
+<p><a href="https://www.servicemesher.com/istio-handbook/practice/integration-registry.html" target="_blank">https://www.servicemesher.com/istio-handbook/practice/integration-registry.html</a></p>
+<p><a href="https://blog.51cto.com/u_14120339/4807120" target="_blank">https://blog.51cto.com/u_14120339/4807120</a></p>
+<p><a href="https://www.envoyproxy.io/" target="_blank">https://www.envoyproxy.io/</a></p>
+</blockquote>
+<h1 id="作者介绍">作者介绍<a class="anchorjs-link" href="#%e4%bd%9c%e8%80%85%e4%bb%8b%e7%bb%8d"></a></h1><p>Github 账号：<a href="https://github.com/binbin0325" target="_blank">binbin0325</a>，公众号:<a href="/about" target="_blank">柠檬汁Code</a>，<a href="https://github.com/alibaba/sentinel-golang" target="_blank">Sentinel-Golang</a> Committer 、<a href="https://github.com/chaosblade-io/chaosblade" target="_blank">ChaosBlade</a> Committer 、 <a href="https://github.com/alibaba/nacos" target="_blank">Nacos</a> PMC 、<a href="https://github.com/apache/dubbo-go" target="_blank">Apache Dubbo-Go</a> Committer。目前主要关注于混沌工程、中间件以及云原生方向。</p>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/wechat/info.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure></p>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/same-city-2/" data-toggle="tooltip" data-placement="top" title="同城双活的必修课 - 落地经验与关键挑战解析">
+              Previous<br>
+              <span>同城双活的必修课 - 落地经验与关键挑战解析</span>
+            </a>
+          </li>
+          
+          
+          <li class="next">
+            <a href="/posts/govsjava/" data-toggle="tooltip" data-placement="top" title="Go vs Java 全方位对比">
+              Next<br>
+              <span>Go vs Java 全方位对比</span>
+            </a>
+          </li>
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<div class="giscus" id="comments"></div>
+<script src="https://giscus.app/client.js" 
+  data-repo="roninro/hugo-theme-puppet" 
+  data-repo-id="R_kgDOHuvyhw"
+  data-category="General"
+  data-category-id="DIC_kwDOHuvyh84CQjDo"
+  data-mapping="pathname"
+  data-strict="0" 
+  data-reactions-enabled="1" 
+  data-emit-metadata="0" 
+  data-input-position="top"
+  data-theme="light_tritanopia"
+  data-lang="en"
+  crossorigin="anonymous"
+  async>
+  </script>
+
+
+
+
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+      
+      <div class="
+              col-lg-8 col-lg-offset-2
+              col-md-10 col-md-offset-1
+              sidebar-container">
+
+        
+        
+        <section>
+  
+  
+  <hr class="hidden-sm hidden-xs">
+  
+  <h5>FEATURED TAGS</h5>
+  <div class="tags">
+    
+    <a href="/tags/algorithm/">algorithm</a>
+    
+    <a href="/tags/cgroups/">cgroups</a>
+    
+    <a href="/tags/chaos/">chaos</a>
+    
+    <a href="/tags/chaosblade/">chaosblade</a>
+    
+    <a href="/tags/cpu/">cpu</a>
+    
+    <a href="/tags/go/">go</a>
+    
+    <a href="/tags/java/">java</a>
+    
+    <a href="/tags/jvm/">jvm</a>
+    
+    <a href="/tags/linux/">linux</a>
+    
+    <a href="/tags/mem/">mem</a>
+    
+    <a href="/tags/namespace/">namespace</a>
+    
+    <a href="/tags/proxyless/">proxyless</a>
+    
+    <a href="/tags/sentinel-go/">sentinel-go</a>
+    
+    <a href="/tags/service-mesh/">service mesh</a>
+    
+    <a href="/tags/%E5%90%8C%E5%9F%8E%E5%8F%8C%E6%B4%BB/">同城双活</a>
+    
+    <a href="/tags/%E5%AD%97%E8%8A%82%E7%A0%81/">字节码</a>
+    
+    <a href="/tags/%E5%AE%B9%E7%81%BE%E6%9E%B6%E6%9E%84/">容灾架构</a>
+    
+    <a href="/tags/%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB/">异地多活</a>
+    
+    <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">微服务</a>
+    
+    <a href="/tags/%E6%B7%B7%E6%B2%8C%E5%B7%A5%E7%A8%8B/">混沌工程</a>
+    
+  </div>
+</section>
+
+        
+        
+
+<hr>
+<h5>FRIENDS</h5>
+<ul class="list-inline">
+  
+  <li><a href="" target="_blank">WeChat:柠檬汁Code</a></li>
+  
+</ul>
+
+      </div>
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center">
+
+<li>
+  <a href="https://github.com/binbin0325" target="_blank">
+    <span class="fa-stack fa-lg">
+      <i class="fa fa-circle fa-stack-2x"></i>
+      <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+    </span>
+  </a>
+</li></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; binbin0325 2024  
+          <br>
+          Powered by <a href="https://gohugo.io">Hugo</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.c4ea77041cd3edbfc8b2622cd887a9a5d8760a4162d14489e36d2a3fa4c90172.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.ade6bde8f9fcc6a4b40852cb892e9f5912340ab8fe1305149d917fdd16fffd8d.js'></script>
+<script>
+   $(document).ready( function () {
+    $('.catalog-body').onePageNav({
+      currentClass: "active",
+      changeHash: !1,
+      easing: "swing",
+      filter: "",
+      scrollSpeed: 700,
+      scrollOffset: 0,
+      scrollThreshold: .2,
+      begin: null,
+      end: null,
+      scrollChange: null,
+      padding: 80
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+</body>
+
+</html>
